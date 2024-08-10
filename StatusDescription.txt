@@ -1,0 +1,25 @@
+We have developed a WPF application called "File Monitor" with two main components:
+
+1. Download Monitor:
+   - Watches the user's Downloads folder for new files
+   - Displays files in a ListBox with original and PascalCase filenames
+   - Allows moving and renaming files to a selected destination folder
+   - Provides functionality to delete selected files
+
+2. File Change Monitor:
+   - Monitors a user-selected folder for file changes (creations, modifications, renames)
+   - Displays changed files in a ListBox with filenames and last modified times
+   - Supports drag-and-drop functionality to copy files to other applications
+   - Removes dragged files from the ListBox but keeps original files intact
+   - Allows opening files with a double-click
+
+The application uses a two-column layout, displaying both monitors side-by-side for easy comparison and management. Key features include:
+
+- FileSystemWatcher for real-time file monitoring
+- Custom file renaming to PascalCase
+- Drag-and-drop support with Windows API
+- File operations (move, rename, delete)
+
+The application is built using C# and XAML, with the main logic in MainWindow.xaml.cs and the UI defined in MainWindow.xaml.
+
+In our next chat, we can discuss potential improvements, additional features, or any specific aspects of the application you'd like to modify or expand upon.
