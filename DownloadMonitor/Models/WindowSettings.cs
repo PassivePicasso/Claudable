@@ -6,6 +6,7 @@
         public double Height { get; set; }
         public double Left { get; set; }
         public double Top { get; set; }
-        public double LeftPanelRatio { get; set; }
+        public double LeftColumnRatio { get; set; }
+        public bool IsPanelsSwapped { get; set; }
     }
 }

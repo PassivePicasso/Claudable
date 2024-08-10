@@ -15,7 +15,7 @@
         </Grid.ColumnDefinitions>
 
         
-        <Button Grid.Column="1" Content="↔" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" 
+        <Button Grid.Column="1" Content="↔" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2,2,2,0" 
                 Padding="0,-6,0,-2" 
                 FontSize="16" FontWeight="Bold" 
                 Click="SwapPanels_Click" />

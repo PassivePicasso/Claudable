@@ -34,7 +34,7 @@ namespace DownloadMonitor
             InitializeFileWatcher();
             InitializeWebView2();
             _viewModel.LoadStateCommand.Execute(null);
-            LoadWindowSize();
+            LoadWindowSettings();
             ApplySwapState();
         }
         #endregion
@@ -119,14 +119,14 @@ namespace DownloadMonitor
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
-            SaveWindowSize();
+            SaveWindowSettings();
             _viewModel.SaveStateCommand.Execute(null);
         }
 
-        private void SaveWindowSize()
+        private void SaveWindowSettings()
         {
-            double totalWidth = LeftColumn.ActualWidth + RightColumn.ActualWidth;
-            double leftRatio = LeftColumn.ActualWidth / totalWidth;
+            double totalWidth = LeftColumn.Width.Value + RightColumn.Width.Value;
+            double leftRatio = LeftColumn.Width.Value / totalWidth;
 
             var settings = new WindowSettings
             {
@@ -134,14 +134,21 @@ namespace DownloadMonitor
                 Height = this.Height,
                 Left = this.Left,
                 Top = this.Top,
-                LeftPanelRatio = leftRatio
+                LeftColumnRatio = leftRatio,
+                IsPanelsSwapped = _viewModel.IsPanelsSwapped
             };
 
-            string json = System.Text.Json.JsonSerializer.Serialize(settings);
-            File.WriteAllText("windowsettings.json", json);
+            try
+            {
+                string json = System.Text.Json.JsonSerializer.Serialize(settings);
+                File.WriteAllText("windowsettings.json", json);
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
-        private void LoadWindowSize()
+        private void LoadWindowSettings()
         {
             if (File.Exists("windowsettings.json"))
             {
@@ -162,8 +169,17 @@ namespace DownloadMonitor
             this.Left = settings.Left;
             this.Top = settings.Top;
 
-            LeftColumn.Width = new GridLength(settings.LeftPanelRatio, GridUnitType.Star);
-            RightColumn.Width = new GridLength(1 - settings.LeftPanelRatio, GridUnitType.Star);
+            if (settings.IsPanelsSwapped != _viewModel.IsPanelsSwapped)
+            {
+                SwapPanels(false);
+            }
+
+            ApplyColumnRatios(settings.LeftColumnRatio);
+        }
+        private void ApplyColumnRatios(double leftRatio)
+        {
+            LeftColumn.Width = new GridLength(leftRatio, GridUnitType.Star);
+            RightColumn.Width = new GridLength(1 - leftRatio, GridUnitType.Star);
         }
         #endregion
 
@@ -428,12 +444,19 @@ namespace DownloadMonitor
         private void SwapPanels(bool updateViewModel)
         {
             SwapPanelContents();
-            SwapColumnWidths();
+
+            // Swap column ratios
+            double leftRatio = LeftColumn.ActualWidth / (LeftColumn.ActualWidth + RightColumn.ActualWidth);
+            if (!double.IsNaN(leftRatio))
+                ApplyColumnRatios(1 - leftRatio);
 
             if (updateViewModel)
             {
                 _viewModel.IsPanelsSwapped = !_viewModel.IsPanelsSwapped;
             }
+
+            // Save the new state immediately
+            SaveWindowSettings();
         }
 
         private void SwapPanelContents()
@@ -459,6 +482,7 @@ namespace DownloadMonitor
 
             AdjustColumnWidths(leftColumn, rightColumn);
         }
+
         private void AdjustColumnWidths(ColumnDefinition leftColumn, ColumnDefinition rightColumn)
         {
             double totalWidth = leftColumn.ActualWidth + rightColumn.ActualWidth;
