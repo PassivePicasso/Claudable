@@ -8,5 +8,6 @@
         public double Top { get; set; }
         public double LeftColumnRatio { get; set; }
         public bool IsPanelsSwapped { get; set; }
+        public string LastVisitedUrl { get; set; }
     }
 }

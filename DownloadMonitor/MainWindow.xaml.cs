@@ -18,6 +18,7 @@ namespace DownloadMonitor
         private FileSystemWatcher _changeWatcher;
         private Point _startPoint;
         private bool _isDragging = false;
+        private string _lastVisitedUrl = "https://claude.ai";
         #endregion
 
         #region Properties
@@ -31,10 +32,10 @@ namespace DownloadMonitor
             InitializeComponent();
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
-            InitializeFileWatcher();
-            InitializeWebView2();
             _viewModel.LoadStateCommand.Execute(null);
             LoadWindowSettings();
+            InitializeFileWatcher();
+            InitializeWebView2();
             ApplySwapState();
         }
         #endregion
@@ -46,9 +47,10 @@ namespace DownloadMonitor
             var webView2Environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
 
             await ClaudeWebView.EnsureCoreWebView2Async(webView2Environment);
-            ClaudeWebView.Source = new Uri("https://claude.ai");
+            ClaudeWebView.Source = new Uri(_lastVisitedUrl);
 
             ConfigureWebView2Settings();
+            SetupWebViewEventHandlers();
         }
 
         private void ConfigureWebView2Settings()
@@ -69,6 +71,17 @@ namespace DownloadMonitor
             ClaudeWebView.CoreWebView2.Settings.IsGeneralAutofillEnabled = true;
             ClaudeWebView.CoreWebView2.Settings.IsPasswordAutosaveEnabled = true;
             ClaudeWebView.CoreWebView2.Settings.IsStatusBarEnabled = true;
+        }
+
+        private void SetupWebViewEventHandlers()
+        {
+            ClaudeWebView.SourceChanged += ClaudeWebView_SourceChanged;
+        }
+
+        private void ClaudeWebView_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
+        {
+            _lastVisitedUrl = ClaudeWebView.Source.ToString();
+            SaveWindowSettings();
         }
 
         private void InitializeFileWatcher()
@@ -135,7 +148,8 @@ namespace DownloadMonitor
                 Left = this.Left,
                 Top = this.Top,
                 LeftColumnRatio = leftRatio,
-                IsPanelsSwapped = _viewModel.IsPanelsSwapped
+                IsPanelsSwapped = _viewModel.IsPanelsSwapped,
+                LastVisitedUrl = _lastVisitedUrl
             };
 
             try
@@ -157,30 +171,29 @@ namespace DownloadMonitor
 
                 if (settings != null)
                 {
-                    ApplyWindowSettings(settings);
+                    this.Width = settings.Width;
+                    this.Height = settings.Height;
+                    this.Left = settings.Left;
+                    this.Top = settings.Top;
+
+                    _lastVisitedUrl = settings.LastVisitedUrl ?? "https://claude.ai";
+
+                    if (settings.IsPanelsSwapped != _viewModel.IsPanelsSwapped)
+                    {
+                        SwapPanels(false);
+                    }
+
+                    ApplyColumnRatios(settings.LeftColumnRatio);
                 }
             }
         }
 
-        private void ApplyWindowSettings(WindowSettings settings)
-        {
-            this.Width = settings.Width;
-            this.Height = settings.Height;
-            this.Left = settings.Left;
-            this.Top = settings.Top;
-
-            if (settings.IsPanelsSwapped != _viewModel.IsPanelsSwapped)
-            {
-                SwapPanels(false);
-            }
-
-            ApplyColumnRatios(settings.LeftColumnRatio);
-        }
         private void ApplyColumnRatios(double leftRatio)
         {
             LeftColumn.Width = new GridLength(leftRatio, GridUnitType.Star);
             RightColumn.Width = new GridLength(1 - leftRatio, GridUnitType.Star);
         }
+
         #endregion
 
         #region File Event Handlers
