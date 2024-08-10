@@ -10,12 +10,22 @@ namespace DownloadMonitor.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private bool _isPanelsSwapped;
+        private int _selectedTabIndex;
         private FileTrackingViewModel _downloadMonitorViewModel;
         private FileTrackingViewModel _fileChangeMonitorViewModel;
-        private int _selectedTabIndex;
+        private FilterViewModel _filterViewModel;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public FilterViewModel FilterViewModel
+        {
+            get => _filterViewModel;
+            set
+            {
+                _filterViewModel = value;
+                OnPropertyChanged();
+            }
+        }
         public FileTrackingViewModel DownloadMonitorViewModel
         {
             get => _downloadMonitorViewModel;
@@ -66,9 +76,16 @@ namespace DownloadMonitor.ViewModels
         {
             DownloadMonitorViewModel = new FileTrackingViewModel();
             FileChangeMonitorViewModel = new FileTrackingViewModel();
+            FilterViewModel = new FilterViewModel();
 
             SaveStateCommand = new RelayCommand(SaveState);
             LoadStateCommand = new RelayCommand(LoadState);
+
+            FilterViewModel.ApplyFiltersCommand = new RelayCommand(() =>
+            {
+                DownloadMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
+                FileChangeMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
+            });
         }
         private void SaveState()
         {
@@ -77,12 +94,14 @@ namespace DownloadMonitor.ViewModels
                 DownloadMonitorState = DownloadMonitorViewModel.GetState(),
                 FileChangeMonitorState = FileChangeMonitorViewModel.GetState(),
                 IsPanelsSwapped = IsPanelsSwapped,
-                SelectedTabIndex = SelectedTabIndex
+                SelectedTabIndex = SelectedTabIndex,
+                Filters = FilterViewModel.Filters.ToArray()
             };
 
             string json = JsonConvert.SerializeObject(state);
             File.WriteAllText("appstate.json", json);
         }
+
         private void LoadState()
         {
             if (File.Exists("appstate.json"))
@@ -94,6 +113,10 @@ namespace DownloadMonitor.ViewModels
                 FileChangeMonitorViewModel.SetState(state.FileChangeMonitorState);
                 IsPanelsSwapped = state.IsPanelsSwapped;
                 SelectedTabIndex = state.SelectedTabIndex;
+                FilterViewModel.Filters = new System.Collections.ObjectModel.ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
+
+                DownloadMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
+                FileChangeMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
             }
         }
 

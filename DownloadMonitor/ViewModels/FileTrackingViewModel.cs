@@ -13,6 +13,11 @@ namespace DownloadMonitor.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         private ObservableCollection<TrackedFile> _trackedFiles;
+        private ObservableCollection<TrackedFile> _allTrackedFiles;
+        private List<string> _currentFilters = new List<string>();
+        private string _selectedFolder;
+        private bool _hasChanges;
+
         public ObservableCollection<TrackedFile> TrackedFiles
         {
             get => _trackedFiles;
@@ -23,7 +28,6 @@ namespace DownloadMonitor.ViewModels
             }
         }
 
-        private string _selectedFolder;
         public string SelectedFolder
         {
             get => _selectedFolder;
@@ -34,7 +38,6 @@ namespace DownloadMonitor.ViewModels
             }
         }
 
-        private bool _hasChanges;
         public bool HasChanges
         {
             get => _hasChanges;
@@ -51,6 +54,7 @@ namespace DownloadMonitor.ViewModels
 
         public FileTrackingViewModel()
         {
+            _allTrackedFiles = new ObservableCollection<TrackedFile>();
             TrackedFiles = new ObservableCollection<TrackedFile>();
             BrowseFolderCommand = new RelayCommand(BrowseFolder);
             MoveAndRenameFilesCommand = new RelayCommand(MoveAndRenameFiles, CanMoveAndRenameFiles);
@@ -88,7 +92,6 @@ namespace DownloadMonitor.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    // Handle or log the exception
                     System.Windows.MessageBox.Show($"Error moving file {file.FileName}: {ex.Message}");
                 }
             }
@@ -128,20 +131,37 @@ namespace DownloadMonitor.ViewModels
             }
         }
 
+        public void ApplyFilters(IEnumerable<string> filters)
+        {
+            _currentFilters = filters.Select(f => f.ToLowerInvariant()).ToList();
+
+            TrackedFiles = new ObservableCollection<TrackedFile>(
+                _allTrackedFiles.Where(file => !IsExcludedByFilters(file))
+            );
+        }
+        private bool IsExcludedByFilters(TrackedFile file)
+        {
+            string fullPath = file.FullPath.ToLowerInvariant();
+            return _currentFilters.Any(filter => fullPath.Contains(filter));
+        }
+
         public void AddFile(string filePath)
         {
-            if (!TrackedFiles.Any(f => f.FullPath == filePath))
+            var newFile = new TrackedFile(filePath);
+            _allTrackedFiles.Add(newFile);
+            if (!IsExcludedByFilters(newFile))
             {
-                TrackedFiles.Add(new TrackedFile(filePath));
-                HasChanges = true;
+                TrackedFiles.Add(newFile);
             }
+            HasChanges = true;
         }
 
         public void RemoveFile(string filePath)
         {
-            var fileToRemove = TrackedFiles.FirstOrDefault(f => f.FullPath == filePath);
+            var fileToRemove = _allTrackedFiles.FirstOrDefault(f => f.FullPath == filePath);
             if (fileToRemove != null)
             {
+                _allTrackedFiles.Remove(fileToRemove);
                 TrackedFiles.Remove(fileToRemove);
                 HasChanges = true;
             }
@@ -149,10 +169,18 @@ namespace DownloadMonitor.ViewModels
 
         public void UpdateFile(string filePath)
         {
-            var existingFile = TrackedFiles.FirstOrDefault(f => f.FullPath == filePath);
+            var existingFile = _allTrackedFiles.FirstOrDefault(f => f.FullPath == filePath);
             if (existingFile != null)
             {
                 existingFile.LastModified = File.GetLastWriteTime(filePath);
+                if (!IsExcludedByFilters(existingFile) && !TrackedFiles.Contains(existingFile))
+                {
+                    TrackedFiles.Add(existingFile);
+                }
+                else if (IsExcludedByFilters(existingFile) && TrackedFiles.Contains(existingFile))
+                {
+                    TrackedFiles.Remove(existingFile);
+                }
                 HasChanges = true;
             }
             else
@@ -163,6 +191,7 @@ namespace DownloadMonitor.ViewModels
 
         public void Clear()
         {
+            _allTrackedFiles.Clear();
             TrackedFiles.Clear();
             HasChanges = false;
         }
@@ -171,14 +200,14 @@ namespace DownloadMonitor.ViewModels
         {
             return new FileTrackingState
             {
-                TrackedFiles = TrackedFiles.ToList(),
-                SelectedFolder = SelectedFolder
+                TrackedFiles = _allTrackedFiles.ToList(),
+                SelectedFolder = SelectedFolder,
             };
         }
 
         public void SetState(FileTrackingState state)
         {
-            TrackedFiles = new ObservableCollection<TrackedFile>(state.TrackedFiles);
+            _allTrackedFiles = new ObservableCollection<TrackedFile>(state.TrackedFiles);
             SelectedFolder = state.SelectedFolder;
         }
 

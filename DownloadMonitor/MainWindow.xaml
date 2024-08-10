@@ -104,6 +104,50 @@
                         </Grid>
                     </Border>
                 </TabItem>
+                <TabItem Header="Filter Settings" Style="{StaticResource TabItemWithBadgeStyle}">
+                    <Border BorderThickness="1" BorderBrush="Black" Margin="2">
+                        <Grid Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Filter Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBox x:Name="NewFilterInput" Text="{Binding FilterViewModel.NewFilter, UpdateSourceTrigger=PropertyChanged}" 
+                             Width="200" Margin="0,0,10,0"/>
+                                <Button Content="Add Filter" 
+                            Command="{Binding FilterViewModel.AddFilterCommand}" 
+                                        IsDefault="{Binding ElementName=NewFilterInput, Path=IsKeyboardFocusWithin}"
+                            Width="80"/>
+                            </StackPanel>
+
+                            <ListBox Grid.Row="2" ItemsSource="{Binding FilterViewModel.Filters}" Margin="0,0,0,10">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding}" Margin="0,0,10,0"/>
+                                            <Button Content="Remove" 
+                                        Command="{Binding DataContext.FilterViewModel.RemoveFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <StackPanel Grid.Row="3" Orientation="Vertical">
+                                <Button Content="Apply Filters" 
+                            Command="{Binding FilterViewModel.ApplyFiltersCommand}" 
+                            HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                <TextBlock Text="Files containing any of these filters in their paths will be excluded." 
+                               TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </TabItem>
                 <TabItem Header="Project Info">
                     <TextBlock Text="Project information will be displayed here." 
                            HorizontalAlignment="Center" 
