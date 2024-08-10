@@ -12,6 +12,7 @@ namespace DownloadMonitor.ViewModels
         private bool _isPanelsSwapped;
         private FileTrackingViewModel _downloadMonitorViewModel;
         private FileTrackingViewModel _fileChangeMonitorViewModel;
+        private int _selectedTabIndex;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -45,6 +46,19 @@ namespace DownloadMonitor.ViewModels
                 }
             }
         }
+        public int SelectedTabIndex
+        {
+            get => _selectedTabIndex;
+            set
+            {
+                if (_selectedTabIndex != value)
+                {
+                    _selectedTabIndex = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
 
@@ -56,20 +70,19 @@ namespace DownloadMonitor.ViewModels
             SaveStateCommand = new RelayCommand(SaveState);
             LoadStateCommand = new RelayCommand(LoadState);
         }
-
         private void SaveState()
         {
             var state = new AppState
             {
                 DownloadMonitorState = DownloadMonitorViewModel.GetState(),
                 FileChangeMonitorState = FileChangeMonitorViewModel.GetState(),
-                IsPanelsSwapped = IsPanelsSwapped
+                IsPanelsSwapped = IsPanelsSwapped,
+                SelectedTabIndex = SelectedTabIndex
             };
 
             string json = JsonConvert.SerializeObject(state);
             File.WriteAllText("appstate.json", json);
         }
-
         private void LoadState()
         {
             if (File.Exists("appstate.json"))
@@ -80,6 +93,7 @@ namespace DownloadMonitor.ViewModels
                 DownloadMonitorViewModel.SetState(state.DownloadMonitorState);
                 FileChangeMonitorViewModel.SetState(state.FileChangeMonitorState);
                 IsPanelsSwapped = state.IsPanelsSwapped;
+                SelectedTabIndex = state.SelectedTabIndex;
             }
         }
 

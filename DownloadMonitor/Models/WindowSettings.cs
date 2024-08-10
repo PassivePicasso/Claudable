@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DownloadMonitor.Models
+﻿namespace DownloadMonitor.Models
 {
     public class WindowSettings
     {
@@ -12,5 +6,6 @@ namespace DownloadMonitor.Models
         public double Height { get; set; }
         public double Left { get; set; }
         public double Top { get; set; }
+        public double LeftPanelRatio { get; set; }
     }
 }

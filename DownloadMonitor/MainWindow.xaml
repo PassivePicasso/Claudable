@@ -14,104 +14,105 @@
             <ColumnDefinition Width="0.75*" x:Name="RightColumn" MinWidth="100"/>
         </Grid.ColumnDefinitions>
 
-
+        
         <Button Grid.Column="1" Content="↔" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" 
                 Padding="0,-6,0,-2" 
                 FontSize="16" FontWeight="Bold" 
                 Click="SwapPanels_Click" />
 
         <Grid x:Name="LeftPanel" Grid.Column="0">
-            <!-- File Monitors -->
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <wv2:WebView2 x:Name="ClaudeWebView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        </Grid>
 
-                <!-- Download Monitor -->
-                <Border  Grid.Row="0" BorderThickness="1" BorderBrush="Black" Margin="2">
-                    <Grid Margin="4">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+        <!-- Right Panel: Monitor Tabs -->
+        <Grid x:Name="RightPanel" Grid.Column="2">
+            <TabControl Grid.Column="2" TabStripPlacement="Bottom" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <TabItem Header="Download Monitor">
+                    <!-- Download Monitor -->
+                    <Border  Grid.Row="0" BorderThickness="1" BorderBrush="Black" Margin="2">
+                        <Grid Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="Download Monitor" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Grid.Row="0" Text="Download Monitor" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBox Text="{Binding DownloadMonitorViewModel.SelectedFolder, Mode=OneWay}" Width="300" IsReadOnly="True"/>
-                            <Button Content="Browse" Margin="10,0,0,0" Click="BrowseButton_Click"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBox Text="{Binding DownloadMonitorViewModel.SelectedFolder, Mode=OneWay}" Width="300" IsReadOnly="True"/>
+                                <Button Content="Browse" Margin="10,0,0,0" Click="BrowseButton_Click"/>
+                            </StackPanel>
 
-                        <ListBox x:Name="FileListBox" Grid.Row="2" 
+                            <ListBox x:Name="FileListBox" Grid.Row="2" 
                                  ItemsSource="{Binding DownloadMonitorViewModel.TrackedFiles}"
                                  SelectionMode="Multiple" 
                                  KeyDown="FileListBox_KeyDown" 
                                  Margin="0,0,0,10">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding FileName, StringFormat='{}{0} -> '}" />
-                                        <TextBlock Text="{Binding PascalCaseFileName}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding FileName, StringFormat='{}{0} -> '}" />
+                                            <TextBlock Text="{Binding PascalCaseFileName}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
 
-                        <StackPanel Grid.Row="3" Orientation="Horizontal">
-                            <Button Content="Move and rename files" Margin="0,0,10,0"
+                            <StackPanel Grid.Row="3" Orientation="Horizontal">
+                                <Button Content="Move and rename files" Margin="0,0,10,0"
                                         Command="{Binding DownloadMonitorViewModel.MoveAndRenameFilesCommand}"/>
-                            <Button Content="Delete Selected"
+                                <Button Content="Delete Selected"
                                         Command="{Binding DownloadMonitorViewModel.DeleteSelectedFilesCommand}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </TabItem>
+                <TabItem Header="File Change Monitor">
+                    <!-- File Change Monitor -->
+                    <Border  Grid.Row="1" BorderThickness="1" BorderBrush="Black" Margin="2">
+                        <Grid Margin="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                <!-- File Change Monitor -->
-                <Border  Grid.Row="1" BorderThickness="1" BorderBrush="Black" Margin="2">
-                    <Grid Margin="4">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="File Change Monitor" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <TextBlock Grid.Row="0" Text="File Change Monitor" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBox Text="{Binding FileChangeMonitorViewModel.SelectedFolder, Mode=OneWay}" Width="300" IsReadOnly="True"/>
+                                <Button Content="Browse" Margin="10,0,0,0" Click="BrowseMonitoredFolderButton_Click"/>
+                            </StackPanel>
 
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBox Text="{Binding FileChangeMonitorViewModel.SelectedFolder, Mode=OneWay}" Width="300" IsReadOnly="True"/>
-                            <Button Content="Browse" Margin="10,0,0,0" Click="BrowseMonitoredFolderButton_Click"/>
-                        </StackPanel>
-
-                        <ListBox x:Name="ChangedFilesListBox" Grid.Row="2" 
+                            <ListBox x:Name="ChangedFilesListBox" Grid.Row="2" 
                                  ItemsSource="{Binding FileChangeMonitorViewModel.TrackedFiles}"
                                  SelectionMode="Extended"
                                  PreviewMouseLeftButtonDown="ChangedFilesListBox_PreviewMouseLeftButtonDown"
                                  PreviewMouseMove="ChangedFilesListBox_PreviewMouseMove"
                                  MouseDoubleClick="ChangedFilesListBox_MouseDoubleClick">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding FileName}" />
-                                        <TextBlock Text="{Binding LastModified, StringFormat=' (Last modified: {0})'}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Grid>
-                </Border>
-
-
-            </Grid>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding FileName}" />
+                                            <TextBlock Text="{Binding LastModified, StringFormat=' (Last modified: {0})'}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                </TabItem>
+                <TabItem Header="Project Info">
+                    <TextBlock Text="Project information will be displayed here." 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"/>
+                </TabItem>
+            </TabControl>
         </Grid>
 
         <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Gray"
                       Margin="0,20,0,20"/>
-
-        <Grid x:Name="RightPanel" Grid.Column="2">
-            <wv2:WebView2 x:Name="ClaudeWebView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-        </Grid>
     </Grid>
 </Window>

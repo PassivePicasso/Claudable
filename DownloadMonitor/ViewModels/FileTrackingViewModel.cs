@@ -1,13 +1,10 @@
-using System;
+using DownloadMonitor.Models;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
-using DownloadMonitor.Models;
-using Microsoft.Win32;
-using Newtonsoft.Json;
 
 namespace DownloadMonitor.ViewModels
 {
@@ -33,6 +30,17 @@ namespace DownloadMonitor.ViewModels
             set
             {
                 _selectedFolder = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private bool _hasChanges;
+        public bool HasChanges
+        {
+            get => _hasChanges;
+            set
+            {
+                _hasChanges = value;
                 OnPropertyChanged();
             }
         }
@@ -125,6 +133,7 @@ namespace DownloadMonitor.ViewModels
             if (!TrackedFiles.Any(f => f.FullPath == filePath))
             {
                 TrackedFiles.Add(new TrackedFile(filePath));
+                HasChanges = true;
             }
         }
 
@@ -134,6 +143,7 @@ namespace DownloadMonitor.ViewModels
             if (fileToRemove != null)
             {
                 TrackedFiles.Remove(fileToRemove);
+                HasChanges = true;
             }
         }
 
@@ -143,6 +153,7 @@ namespace DownloadMonitor.ViewModels
             if (existingFile != null)
             {
                 existingFile.LastModified = File.GetLastWriteTime(filePath);
+                HasChanges = true;
             }
             else
             {
@@ -153,6 +164,7 @@ namespace DownloadMonitor.ViewModels
         public void Clear()
         {
             TrackedFiles.Clear();
+            HasChanges = false;
         }
 
         public FileTrackingState GetState()
@@ -168,68 +180,6 @@ namespace DownloadMonitor.ViewModels
         {
             TrackedFiles = new ObservableCollection<TrackedFile>(state.TrackedFiles);
             SelectedFolder = state.SelectedFolder;
-        }
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
-    public class TrackedFile : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private string _fullPath;
-        public string FullPath
-        {
-            get => _fullPath;
-            set
-            {
-                _fullPath = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(FileName));
-                OnPropertyChanged(nameof(PascalCaseFileName));
-            }
-        }
-
-        public string FileName => Path.GetFileName(FullPath);
-
-        public string PascalCaseFileName => ToPascalCase(Path.GetFileNameWithoutExtension(FullPath)) + Path.GetExtension(FullPath);
-
-        private DateTime _lastModified;
-        public DateTime LastModified
-        {
-            get => _lastModified;
-            set
-            {
-                _lastModified = value;
-                OnPropertyChanged();
-            }
-        }
-
-        private bool _isSelected;
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public TrackedFile(string fullPath)
-        {
-            FullPath = fullPath;
-            LastModified = File.GetLastWriteTime(fullPath);
-        }
-
-        private string ToPascalCase(string input)
-        {
-            input = input.Replace("_", " ").Replace("-", " ");
-            return string.Join("", input.Split(' ')
-                .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
