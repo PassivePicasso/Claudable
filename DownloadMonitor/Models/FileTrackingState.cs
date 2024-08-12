@@ -1,6 +1,6 @@
-﻿using DownloadMonitor.ViewModels;
+﻿using Claudable.ViewModels;
 
-namespace DownloadMonitor.Models
+namespace Claudable.Models
 {
     public class FileTrackingState
     {

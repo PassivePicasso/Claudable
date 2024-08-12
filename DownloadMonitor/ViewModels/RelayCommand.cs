@@ -1,6 +1,6 @@
 ﻿using System.Windows.Input;
 
-namespace DownloadMonitor.ViewModels
+namespace Claudable.ViewModels
 {
     public class RelayCommand : ICommand
     {

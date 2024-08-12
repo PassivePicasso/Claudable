@@ -9,8 +9,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Images\folder.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Images\folder.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2730-prerelease" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SharpVectors.Wpf" Version="1.8.4.1" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="Svg.Skia" Version="2.0.0" />
   </ItemGroup>
 
 </Project>

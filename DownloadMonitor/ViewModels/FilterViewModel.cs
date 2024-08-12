@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace DownloadMonitor.ViewModels
+namespace Claudable.ViewModels
 {
     public class FilterViewModel : INotifyPropertyChanged
     {

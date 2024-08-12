@@ -1,21 +1,34 @@
-using DownloadMonitor.Models;
+using Claudable.Models;
+using Microsoft.Win32;
 using Newtonsoft.Json;
+using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace DownloadMonitor.ViewModels
+namespace Claudable.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        private ProjectFolder _rootProjectFolder;
+        private FilterViewModel _filterViewModel;
+        private FileTrackingViewModel _fileChangeMonitorViewModel;
+        private DownloadManager _downloadManager;
         private bool _isPanelsSwapped;
         private int _selectedTabIndex;
-        private FileTrackingViewModel _downloadMonitorViewModel;
-        private FileTrackingViewModel _fileChangeMonitorViewModel;
-        private FilterViewModel _filterViewModel;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public ProjectFolder RootProjectFolder
+        {
+            get => _rootProjectFolder;
+            set
+            {
+                _rootProjectFolder = value;
+                OnPropertyChanged();
+            }
+        }
 
         public FilterViewModel FilterViewModel
         {
@@ -26,15 +39,7 @@ namespace DownloadMonitor.ViewModels
                 OnPropertyChanged();
             }
         }
-        public FileTrackingViewModel DownloadMonitorViewModel
-        {
-            get => _downloadMonitorViewModel;
-            set
-            {
-                _downloadMonitorViewModel = value;
-                OnPropertyChanged();
-            }
-        }
+
         public FileTrackingViewModel FileChangeMonitorViewModel
         {
             get => _fileChangeMonitorViewModel;
@@ -44,6 +49,17 @@ namespace DownloadMonitor.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        public DownloadManager DownloadManager
+        {
+            get => _downloadManager;
+            set
+            {
+                _downloadManager = value;
+                OnPropertyChanged();
+            }
+        }
+
         public bool IsPanelsSwapped
         {
             get => _isPanelsSwapped;
@@ -56,6 +72,7 @@ namespace DownloadMonitor.ViewModels
                 }
             }
         }
+
         public int SelectedTabIndex
         {
             get => _selectedTabIndex;
@@ -69,33 +86,84 @@ namespace DownloadMonitor.ViewModels
             }
         }
 
+        public ICommand SetProjectRootCommand { get; private set; }
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
 
         public MainViewModel()
         {
-            DownloadMonitorViewModel = new FileTrackingViewModel();
-            FileChangeMonitorViewModel = new FileTrackingViewModel();
             FilterViewModel = new FilterViewModel();
+            FileChangeMonitorViewModel = new FileTrackingViewModel();
+            DownloadManager = new DownloadManager();
 
+            SetProjectRootCommand = new RelayCommand(SetProjectRoot);
             SaveStateCommand = new RelayCommand(SaveState);
             LoadStateCommand = new RelayCommand(LoadState);
-
-            FilterViewModel.ApplyFiltersCommand = new RelayCommand(() =>
-            {
-                DownloadMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
-                FileChangeMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
-            });
+            FilterViewModel.ApplyFiltersCommand = new RelayCommand(ApplyFilters);
         }
+
+        private void SetProjectRoot()
+        {
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Select Project Root Folder"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string rootPath = dialog.FolderName;
+                RootProjectFolder = new ProjectFolder(Path.GetFileName(rootPath), rootPath);
+                LoadProjectStructure(RootProjectFolder);
+                ApplyFilters();
+            }
+        }
+
+        private void LoadProjectStructure(ProjectFolder folder)
+        {
+            try
+            {
+                foreach (var directory in Directory.GetDirectories(folder.FullPath))
+                {
+                    var subFolder = new ProjectFolder(Path.GetFileName(directory), directory);
+                    folder.SubFolders.Add(subFolder);
+                    LoadProjectStructure(subFolder);
+                }
+
+                foreach (var file in Directory.GetFiles(folder.FullPath))
+                {
+                    folder.Files.Add(Path.GetFileName(file));
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"Unauthorized access to {folder.FullPath}: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading folder {folder.FullPath}: {ex.Message}");
+            }
+        }
+
+        private void ApplyFilters()
+        {
+            if (RootProjectFolder != null)
+            {
+                RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray());
+                OnPropertyChanged(nameof(RootProjectFolder));
+            }
+
+            FileChangeMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
+        }
+
         private void SaveState()
         {
             var state = new AppState
             {
-                DownloadMonitorState = DownloadMonitorViewModel.GetState(),
                 FileChangeMonitorState = FileChangeMonitorViewModel.GetState(),
                 IsPanelsSwapped = IsPanelsSwapped,
                 SelectedTabIndex = SelectedTabIndex,
-                Filters = FilterViewModel.Filters.ToArray()
+                Filters = FilterViewModel.Filters.ToArray(),
+                ProjectRootPath = RootProjectFolder?.FullPath
             };
 
             string json = JsonConvert.SerializeObject(state);
@@ -109,16 +177,22 @@ namespace DownloadMonitor.ViewModels
                 string json = File.ReadAllText("appstate.json");
                 var state = JsonConvert.DeserializeObject<AppState>(json);
 
-                DownloadMonitorViewModel.SetState(state.DownloadMonitorState);
                 FileChangeMonitorViewModel.SetState(state.FileChangeMonitorState);
                 IsPanelsSwapped = state.IsPanelsSwapped;
                 SelectedTabIndex = state.SelectedTabIndex;
-                FilterViewModel.Filters = new System.Collections.ObjectModel.ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
+                FilterViewModel.Filters = new ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
 
-                DownloadMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
-                FileChangeMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
+                if (!string.IsNullOrEmpty(state.ProjectRootPath))
+                {
+                    RootProjectFolder = new ProjectFolder(Path.GetFileName(state.ProjectRootPath), state.ProjectRootPath);
+                    LoadProjectStructure(RootProjectFolder);
+                }
+
+                ApplyFilters();
             }
         }
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {

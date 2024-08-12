@@ -1,126 +1,70 @@
-﻿using DownloadMonitor.Models;
-using DownloadMonitor.ViewModels;
-using Microsoft.Web.WebView2.Core;
+﻿using Claudable.Models;
+using Claudable.Services;
+using Claudable.ViewModels;
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
-namespace DownloadMonitor
+namespace Claudable
 {
     public partial class MainWindow : Window
     {
-        #region Fields
-        private MainViewModel _viewModel;
-        private FileSystemWatcher _downloadWatcher;
-        private FileSystemWatcher _changeWatcher;
+        private readonly MainViewModel _viewModel;
+        private readonly FileWatcherService _fileWatcherService;
+        private readonly WebViewManager _webViewManager;
+        private readonly WindowStateManager _windowStateManager;
+        private readonly IDialogService _dialogService;
         private Point _startPoint;
-        private bool _isDragging = false;
-        private string _lastVisitedUrl = "https://claude.ai";
-        #endregion
+        private bool _isLeftPanelExpanded = true;
 
-        #region Properties
-        public FileTrackingViewModel DownloadMonitorViewModel => _viewModel.DownloadMonitorViewModel;
-        public FileTrackingViewModel FileChangeMonitorViewModel => _viewModel.FileChangeMonitorViewModel;
-        #endregion
-
-        #region Constructor
         public MainWindow()
         {
             InitializeComponent();
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
+
+            _dialogService = new DialogService();
+            _webViewManager = new WebViewManager(ClaudeWebView, "https://claude.ai");
+            _windowStateManager = new WindowStateManager(this, _viewModel, _webViewManager);
+            _fileWatcherService = new FileWatcherService(
+                OnFileCreated,
+                OnFileChanged,
+                OnFileRenamed,
+                OnFileDeleted
+            );
+
+            InitializeAsync();
+        }
+
+        private async void InitializeAsync()
+        {
+            await _webViewManager.InitializeAsync();
+            _windowStateManager.LoadState();
             _viewModel.LoadStateCommand.Execute(null);
-            LoadWindowSettings();
-            InitializeFileWatcher();
-            InitializeWebView2();
-            ApplySwapState();
-        }
-        #endregion
+            InitializeFileWatchers();
+            ApplyViewModelState();
 
-        #region Initialization Methods
-        private async void InitializeWebView2()
-        {
-            var userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FileMonitor", "WebView2Data");
-            var webView2Environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
-
-            await ClaudeWebView.EnsureCoreWebView2Async(webView2Environment);
-            ClaudeWebView.Source = new Uri(_lastVisitedUrl);
-
-            ConfigureWebView2Settings();
-            SetupWebViewEventHandlers();
+            // Initialize DownloadManager with WebView2
+            _viewModel.DownloadManager.Initialize(ClaudeWebView.CoreWebView2);
         }
 
-        private void ConfigureWebView2Settings()
-        {
-            // Enable caching
-            ClaudeWebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.IsScriptEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.AreDevToolsEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
-
-            // Enable cookies and local storage
-            ClaudeWebView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.IsPinchZoomEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.IsSwipeNavigationEnabled = true;
-
-            // Persist user data
-            ClaudeWebView.CoreWebView2.Settings.IsGeneralAutofillEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.IsPasswordAutosaveEnabled = true;
-            ClaudeWebView.CoreWebView2.Settings.IsStatusBarEnabled = true;
-        }
-
-        private void SetupWebViewEventHandlers()
-        {
-            ClaudeWebView.SourceChanged += ClaudeWebView_SourceChanged;
-        }
-
-        private void ClaudeWebView_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
-        {
-            _lastVisitedUrl = ClaudeWebView.Source.ToString();
-            SaveWindowSettings();
-        }
-
-        private void InitializeFileWatcher()
+        private void InitializeFileWatchers()
         {
             string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            _downloadWatcher = new FileSystemWatcher(downloadsPath)
-            {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
-                Filter = "*.*"
-            };
-
-            _downloadWatcher.Created += OnFileCreated;
-            _downloadWatcher.Renamed += OnFileRenamed;
-            _downloadWatcher.Deleted += OnFileDeleted;
-            _downloadWatcher.EnableRaisingEvents = true;
+            _fileWatcherService.InitializeDownloadWatcher(downloadsPath);
+            _fileWatcherService.InitializeChangeWatcher(_viewModel.FileChangeMonitorViewModel.SelectedFolder);
         }
 
-        private void InitializeChangeWatcher(string path)
+        private void ApplyViewModelState()
         {
-            if (_changeWatcher != null)
-            {
-                _changeWatcher.Dispose();
-            }
-
-            _changeWatcher = new FileSystemWatcher(path)
-            {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
-                Filter = "*.*",
-                IncludeSubdirectories = true
-            };
-
-            _changeWatcher.Changed += OnFileChanged;
-            _changeWatcher.Created += OnFileChanged;
-            _changeWatcher.Renamed += OnFileRenamed;
-            _changeWatcher.EnableRaisingEvents = true;
+            ApplySwapState();
         }
-        #endregion
 
-        #region Window State Management
         private void ApplySwapState()
         {
             if (_viewModel.IsPanelsSwapped)
@@ -129,347 +73,22 @@ namespace DownloadMonitor
             }
         }
 
-        protected override void OnClosing(CancelEventArgs e)
-        {
-            base.OnClosing(e);
-            SaveWindowSettings();
-            _viewModel.SaveStateCommand.Execute(null);
-        }
-
-        private void SaveWindowSettings()
-        {
-            double totalWidth = LeftColumn.Width.Value + RightColumn.Width.Value;
-            double leftRatio = LeftColumn.Width.Value / totalWidth;
-
-            var settings = new WindowSettings
-            {
-                Width = this.Width,
-                Height = this.Height,
-                Left = this.Left,
-                Top = this.Top,
-                LeftColumnRatio = leftRatio,
-                IsPanelsSwapped = _viewModel.IsPanelsSwapped,
-                LastVisitedUrl = _lastVisitedUrl
-            };
-
-            try
-            {
-                string json = System.Text.Json.JsonSerializer.Serialize(settings);
-                File.WriteAllText("windowsettings.json", json);
-            }
-            catch (Exception ex)
-            {
-            }
-        }
-
-        private void LoadWindowSettings()
-        {
-            if (File.Exists("windowsettings.json"))
-            {
-                string json = File.ReadAllText("windowsettings.json");
-                var settings = System.Text.Json.JsonSerializer.Deserialize<WindowSettings>(json);
-
-                if (settings != null)
-                {
-                    this.Width = settings.Width;
-                    this.Height = settings.Height;
-                    this.Left = settings.Left;
-                    this.Top = settings.Top;
-
-                    _lastVisitedUrl = settings.LastVisitedUrl ?? "https://claude.ai";
-
-                    if (settings.IsPanelsSwapped != _viewModel.IsPanelsSwapped)
-                    {
-                        SwapPanels(false);
-                    }
-
-                    ApplyColumnRatios(settings.LeftColumnRatio);
-                }
-            }
-        }
-
-        private void ApplyColumnRatios(double leftRatio)
-        {
-            LeftColumn.Width = new GridLength(leftRatio, GridUnitType.Star);
-            RightColumn.Width = new GridLength(1 - leftRatio, GridUnitType.Star);
-        }
-
-        #endregion
-
-        #region File Event Handlers
-        private void OnFileCreated(object sender, FileSystemEventArgs e)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (!IsFileHidden(e.FullPath) && !IsUnderDotFolder(e.FullPath))
-                {
-                    DownloadMonitorViewModel.AddFile(e.FullPath);
-                }
-            });
-        }
-
-        private void OnFileRenamed(object sender, RenamedEventArgs e)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (sender == _downloadWatcher)
-                {
-                    HandleDownloadFileRename(e);
-                }
-                else if (sender == _changeWatcher)
-                {
-                    HandleChangeFileRename(e);
-                }
-            });
-        }
-
-        private void HandleDownloadFileRename(RenamedEventArgs e)
-        {
-            DownloadMonitorViewModel.RemoveFile(e.OldFullPath);
-            if (!IsFileHidden(e.FullPath) && !IsUnderDotFolder(e.FullPath))
-            {
-                DownloadMonitorViewModel.AddFile(e.FullPath);
-            }
-        }
-
-        private void HandleChangeFileRename(RenamedEventArgs e)
-        {
-            FileChangeMonitorViewModel.RemoveFile(e.OldFullPath);
-            if (!IsFileHidden(e.FullPath) && !IsUnderDotFolder(e.FullPath))
-            {
-                FileChangeMonitorViewModel.AddFile(e.FullPath);
-            }
-        }
-
-        private void OnFileDeleted(object sender, FileSystemEventArgs e)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                DownloadMonitorViewModel.RemoveFile(e.FullPath);
-            });
-        }
-
-        private void OnFileChanged(object sender, FileSystemEventArgs e)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (File.Exists(e.FullPath) && !IsFileHidden(e.FullPath) && !IsTempFile(e.FullPath) && !IsUnderDotFolder(e.FullPath))
-                {
-                    FileChangeMonitorViewModel.UpdateFile(e.FullPath);
-                }
-            });
-        }
-        #endregion
-
-        #region UI Event Handlers
         private void SwapPanels_Click(object sender, RoutedEventArgs e)
         {
             SwapPanels(true);
         }
 
-        private void RemoveButton_Click(object sender, RoutedEventArgs e)
-        {
-            var button = (Button)sender;
-            var trackedFile = (TrackedFile)button.DataContext;
-
-            if (DownloadMonitorViewModel.TrackedFiles.Any(f => f.FullPath == trackedFile.FullPath))
-            {
-                DownloadMonitorViewModel.RemoveFile(trackedFile.FullPath);
-            }
-            else if (FileChangeMonitorViewModel.TrackedFiles.Any(f => f.FullPath == trackedFile.FullPath))
-            {
-                FileChangeMonitorViewModel.RemoveFile(trackedFile.FullPath);
-            }
-        }
-
-        private void BrowseButton_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFolderDialog
-            {
-                Title = "Select Destination Folder"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                DownloadMonitorViewModel.SelectedFolder = dialog.FolderName;
-            }
-        }
-
-        private void BrowseMonitoredFolderButton_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFolderDialog
-            {
-                Title = "Select Folder to Monitor"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                FileChangeMonitorViewModel.SelectedFolder = dialog.FolderName;
-                InitializeChangeWatcher(FileChangeMonitorViewModel.SelectedFolder);
-                FileChangeMonitorViewModel.Clear();
-            }
-        }
-
-        private void MoveAndRenameButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (string.IsNullOrEmpty(DownloadMonitorViewModel.SelectedFolder))
-            {
-                MessageBox.Show("Please select a destination folder first.");
-                return;
-            }
-
-            MoveAndRenameFiles();
-        }
-
-        private void DeleteButton_Click(object sender, RoutedEventArgs e)
-        {
-            DeleteSelectedFiles();
-        }
-
-        private void FileListBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Delete)
-            {
-                DeleteSelectedFiles();
-            }
-        }
-
-        private void ChangedFilesListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            var listBox = (ListBox)sender;
-            var selectedFile = listBox.SelectedItem as TrackedFile;
-
-            if (selectedFile != null)
-            {
-                OpenFile(selectedFile.FullPath);
-            }
-        }
-
-        private void ChangedFilesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _startPoint = e.GetPosition(null);
-        }
-
-        private void ChangedFilesListBox_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed && !_isDragging)
-            {
-                Point position = e.GetPosition(null);
-
-                if (Math.Abs(position.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(position.Y - _startPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    StartDrag(sender as ListBox);
-                }
-            }
-        }
-        #endregion
-
-        #region Helper Methods
-        private bool IsTempFile(string filePath)
-        {
-            return Path.GetExtension(filePath).Equals(".TMP", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private bool IsFileHidden(string filePath)
-        {
-            try
-            {
-                var attr = File.GetAttributes(filePath);
-                return (attr & FileAttributes.Hidden) == FileAttributes.Hidden;
-            }
-            catch
-            {
-                return true;
-            }
-        }
-
-        private bool IsUnderDotFolder(string filePath)
-        {
-            string[] pathParts = filePath.Split(Path.DirectorySeparatorChar);
-            return pathParts.Any(part => part.StartsWith(".") && part.Length > 1);
-        }
-        private void DeleteSelectedFiles()
-        {
-            var selectedFiles = FileListBox.SelectedItems.Cast<TrackedFile>().ToList();
-            if (selectedFiles.Count == 0)
-            {
-                MessageBox.Show("Please select files to delete.");
-                return;
-            }
-
-            var result = MessageBox.Show($"Are you sure you want to delete {selectedFiles.Count} file(s)?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (result == MessageBoxResult.Yes)
-            {
-                DeleteFiles(selectedFiles);
-            }
-        }
-
-        private void DeleteFiles(List<TrackedFile> files)
-        {
-            foreach (var file in files)
-            {
-                try
-                {
-                    File.Delete(file.FullPath);
-                    DownloadMonitorViewModel.RemoveFile(file.FullPath);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error deleting file {file.FileName}: {ex.Message}");
-                }
-            }
-        }
-
-        private void StartDrag(ListBox listBox)
-        {
-            var selectedFiles = listBox.SelectedItems.Cast<TrackedFile>().ToList();
-
-            if (selectedFiles.Count > 0)
-            {
-                var fileList = selectedFiles.Select(f => f.FullPath).ToList();
-
-                if (fileList.Count > 0)
-                {
-                    PerformDragDrop(listBox, fileList);
-                }
-            }
-        }
-
-        private void PerformDragDrop(ListBox listBox, List<string> fileList)
-        {
-            _isDragging = true;
-            DataObject data = new DataObject(DataFormats.FileDrop, fileList.ToArray());
-            DragDrop.DoDragDrop(listBox, data, DragDropEffects.Copy);
-            _isDragging = false;
-
-            RemoveDraggedFiles(fileList);
-        }
-
-        private void RemoveDraggedFiles(List<string> fileList)
-        {
-            foreach (var filePath in fileList)
-            {
-                FileChangeMonitorViewModel.RemoveFile(filePath);
-            }
-        }
-
         private void SwapPanels(bool updateViewModel)
         {
             SwapPanelContents();
-
-            // Swap column ratios
-            double leftRatio = LeftColumn.ActualWidth / (LeftColumn.ActualWidth + RightColumn.ActualWidth);
-            if (!double.IsNaN(leftRatio))
-                ApplyColumnRatios(1 - leftRatio);
+            SwapColumnWidths();
 
             if (updateViewModel)
             {
                 _viewModel.IsPanelsSwapped = !_viewModel.IsPanelsSwapped;
             }
 
-            // Save the new state immediately
-            SaveWindowSettings();
+            _windowStateManager.SaveState();
         }
 
         private void SwapPanelContents()
@@ -524,24 +143,38 @@ namespace DownloadMonitor
             }
         }
 
-        private void MoveAndRenameFiles()
+        private void BrowseMonitoredFolderButton_Click(object sender, RoutedEventArgs e)
         {
-            foreach (var file in DownloadMonitorViewModel.TrackedFiles.ToList())
+            var dialog = new OpenFolderDialog
             {
-                string destinationPath = Path.Combine(DownloadMonitorViewModel.SelectedFolder, file.PascalCaseFileName);
+                Title = "Select Folder to Monitor"
+            };
 
-                try
-                {
-                    File.Move(file.FullPath, destinationPath);
-                    DownloadMonitorViewModel.RemoveFile(file.FullPath);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error moving file {file.FileName}: {ex.Message}");
-                }
+            if (dialog.ShowDialog() == true)
+            {
+                _viewModel.FileChangeMonitorViewModel.SelectedFolder = dialog.FolderName;
+                _fileWatcherService.InitializeChangeWatcher(_viewModel.FileChangeMonitorViewModel.SelectedFolder);
+                _viewModel.FileChangeMonitorViewModel.Clear();
             }
+        }
 
-            MessageBox.Show("Files moved and renamed successfully!");
+        private void FileListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete)
+            {
+                _viewModel.FileChangeMonitorViewModel.DeleteSelectedFilesCommand.Execute(null);
+            }
+        }
+
+        private void ChangedFilesListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var listBox = (ListBox)sender;
+            var selectedFile = listBox.SelectedItem as TrackedFile;
+
+            if (selectedFile != null)
+            {
+                OpenFile(selectedFile.FullPath);
+            }
         }
 
         private void OpenFile(string filePath)
@@ -552,9 +185,123 @@ namespace DownloadMonitor
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening file: {ex.Message}");
+                _dialogService.ShowError($"Error opening file: {ex.Message}");
             }
         }
-        #endregion
+
+        private void OnFileCreated(string filePath)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _viewModel.FileChangeMonitorViewModel.AddFile(filePath);
+            });
+        }
+
+        private void OnFileChanged(string filePath)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _viewModel.FileChangeMonitorViewModel.UpdateFile(filePath);
+            });
+        }
+
+        private void OnFileRenamed(string oldPath, string newPath)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _viewModel.FileChangeMonitorViewModel.RemoveFile(oldPath);
+                _viewModel.FileChangeMonitorViewModel.AddFile(newPath);
+            });
+        }
+
+        private void OnFileDeleted(string filePath)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _viewModel.FileChangeMonitorViewModel.RemoveFile(filePath);
+            });
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            _windowStateManager.SaveState();
+            _viewModel.SaveStateCommand.Execute(null);
+            _fileWatcherService.Dispose();
+        }
+
+        private void DownloadItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _startPoint = e.GetPosition(null);
+        }
+
+        private void DownloadItem_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    ListBox listBox = sender as ListBox;
+                    ListBoxItem listBoxItem = FindAncestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+
+                    if (listBoxItem != null)
+                    {
+                        DownloadItem downloadItem = (DownloadItem)listBox.ItemContainerGenerator.ItemFromContainer(listBoxItem);
+
+                        DataObject dragData = new DataObject("DownloadItem", downloadItem);
+                        DragDrop.DoDragDrop(listBoxItem, dragData, DragDropEffects.Move);
+                    }
+                }
+            }
+        }
+
+        private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            do
+            {
+                if (current is T)
+                {
+                    return (T)current;
+                }
+                current = VisualTreeHelper.GetParent(current);
+            }
+            while (current != null);
+            return null;
+        }
+
+        private void ProjectFolder_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("DownloadItem"))
+            {
+                DownloadItem downloadItem = e.Data.GetData("DownloadItem") as DownloadItem;
+                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+
+                if (treeViewItem != null)
+                {
+                    ProjectFolder targetFolder = treeViewItem.DataContext as ProjectFolder;
+
+                    if (targetFolder != null && downloadItem != null)
+                    {
+                        string sourceFilePath = downloadItem.FileName;
+                        string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
+
+                        try
+                        {
+                            File.Move(sourceFilePath, destinationFilePath);
+                            _viewModel.DownloadManager.Downloads.Remove(downloadItem);
+                            targetFolder.Files.Add(Path.GetFileName(destinationFilePath));
+                        }
+                        catch (Exception ex)
+                        {
+                            _dialogService.ShowError($"Error moving file: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
     }
 }

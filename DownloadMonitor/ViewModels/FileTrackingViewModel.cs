@@ -1,4 +1,4 @@
-using DownloadMonitor.Models;
+using Claudable.Models;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -6,7 +6,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace DownloadMonitor.ViewModels
+namespace Claudable.ViewModels
 {
     public class FileTrackingViewModel : INotifyPropertyChanged
     {

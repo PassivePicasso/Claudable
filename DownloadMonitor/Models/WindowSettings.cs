@@ -1,4 +1,4 @@
-﻿namespace DownloadMonitor.Models
+﻿namespace Claudable.Models
 {
     public class WindowSettings
     {
