@@ -1,7 +1,6 @@
 ﻿using Claudable.Models;
 using Claudable.Services;
 using Claudable.ViewModels;
-using Microsoft.Win32;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
@@ -133,29 +132,42 @@ namespace Claudable
             }
         }
 
-        private void ChangedFilesListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
         {
-            var listBox = (ListBox)sender;
-            var selectedFile = listBox.SelectedItem as TrackedFile;
+            WindowState = WindowState.Minimized;
+        }
 
-            if (selectedFile != null)
+        private void MaximizeRestoreButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (WindowState == WindowState.Maximized)
             {
-                OpenFile(selectedFile.FullPath);
+                WindowState = WindowState.Normal;
+                MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,0 H10 V10 H0 V0 M0,3 H7 V10 M3,0 V7");
+            }
+            else
+            {
+                WindowState = WindowState.Maximized;
+                MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,3 H7 V10 H0 V3 M3,0 H10 V7 H3 V0");
             }
         }
 
-        private void OpenFile(string filePath)
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                _dialogService.ShowError($"Error opening file: {ex.Message}");
-            }
+            Close();
         }
 
+        protected override void OnStateChanged(EventArgs e)
+        {
+            base.OnStateChanged(e);
+            if (WindowState == WindowState.Maximized)
+            {
+                MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,3 H7 V10 H0 V3 M3,0 H10 V7 H3 V0");
+            }
+            else
+            {
+                MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,0 H10 V10 H0 V0 M0,3 H7 V10 M3,0 V7");
+            }
+        }
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);

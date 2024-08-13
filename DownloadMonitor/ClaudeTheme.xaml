@@ -180,6 +180,31 @@
         <Setter Property="FontSize" Value="11"/>
     </Style>
 
+    <!-- Title Bar Button Style -->
+    <Style x:Key="TitleBarButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource ClaudeTextBrush}"/>
+        <Setter Property="FontFamily" Value="{StaticResource ClaudeFont}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ClaudeHighlightBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    
     <DataTemplate DataType="{x:Type models:DownloadItem}">
         <Border BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="0,0,0,1" Padding="10,5">
             <Grid>

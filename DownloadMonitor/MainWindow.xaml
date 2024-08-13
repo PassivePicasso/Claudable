@@ -12,149 +12,181 @@
     <Window.DataContext>
         <vm:MainViewModel/>
     </Window.DataContext>
+    <WindowChrome.WindowChrome>
+        <WindowChrome 
+            CaptionHeight="32"
+            ResizeBorderThickness="5"
+            GlassFrameThickness="32"
+            CornerRadius="0"
+            UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
-    <Grid x:Name="MainGrid" Background="{StaticResource ClaudeBackgroundBrush}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="0.25*" x:Name="LeftColumn" MinWidth="370"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="0.75*" x:Name="RightColumn" MinWidth="100"/>
-        </Grid.ColumnDefinitions>
+    <Border Background="{StaticResource ClaudeBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource ClaudeBorderBrush}"
+            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Margin="0,32,0,20"/>
+            <!-- Custom title bar -->
+            <Grid Grid.Row="0" Background="{StaticResource ClaudePrimaryBrush}" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <Grid x:Name="LeftPanel" Grid.Column="0">
-            <wv2:WebView2 x:Name="ClaudeWebView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-        </Grid>
+                <Image Grid.Column="0" Source="/Resources/claudable_icon.png" Width="20" Height="20" Margin="6,0,0,0"/>
+                
+                <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin=",0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
 
-        <Grid x:Name="RightPanel" Grid.Column="2">
-            <Grid>
-                <TextBlock Text="Claudable" HorizontalAlignment="Left" VerticalAlignment="Top"
-                           FontSize="22" 
-                           Margin="10"/>
+                <Button Grid.Column="2" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
+                    <Path Data="M0,6 H10" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
+                </Button>
+                <Button Grid.Column="3" Style="{StaticResource TitleBarButtonStyle}" Click="MaximizeRestoreButton_Click">
+                    <Path x:Name="MaximizeRestoreButtonPath" Data="M0,0 H10 V10 H0 V0 M0,3 H7 V10 M3,0 V7" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
+                </Button>
+                <Button Grid.Column="4" Style="{StaticResource TitleBarButtonStyle}" Click="CloseButton_Click">
+                    <Path Data="M0,0 L10,10 M0,10 L10,0" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
+                </Button>
+            </Grid>
+
+            <Grid x:Name="MainGrid" Grid.Row="1" Background="{StaticResource ClaudeBackgroundBrush}"  HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.25*" x:Name="LeftColumn" MinWidth="370"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="0.75*" x:Name="RightColumn" MinWidth="100"/>
+                </Grid.ColumnDefinitions>
+
+                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Margin="0,32,0,20"/>
+
+                <Grid x:Name="LeftPanel" Grid.Column="0">
+                    <wv2:WebView2 x:Name="ClaudeWebView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                </Grid>
+
+                <Grid x:Name="RightPanel" Grid.Column="2">
+                    <Grid>
 
 
-                <Border CornerRadius="16" Padding="16" BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="1"
+                        <Border CornerRadius="16" Padding="16" BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="1"
                         Margin="16,48,16,16">
-                    <TabControl TabStripPlacement="Top" SelectedIndex="{Binding SelectedTabIndex}" >
-                        <TabItem Header="Project">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-
-                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Button Content="Set Project Root" Command="{Binding SetProjectRootCommand}" Margin="0,0,10,0"/>
-                                </StackPanel>
-
-                                <Grid Grid.Row="1" >
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="50"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0">
+                            <TabControl TabStripPlacement="Top" SelectedIndex="{Binding SelectedTabIndex}" >
+                                <TabItem Header="Project">
+                                    <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Text="Downloads" FontWeight="Bold" Margin="0,0,0,5"/>
-                                        <ListBox Grid.Row="1" 
+                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                            <Button Content="Set Project Root" Command="{Binding SetProjectRootCommand}" Margin="0,0,10,0"/>
+                                        </StackPanel>
+
+                                        <Grid Grid.Row="1" >
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="50"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+
+                                            <Grid Grid.Row="0">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Grid.Row="0" Text="Downloads" FontWeight="Bold" Margin="0,0,0,5"/>
+                                                <ListBox Grid.Row="1" 
                                                  ItemsSource="{Binding DownloadManager.Downloads}"
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  PreviewMouseLeftButtonDown="DownloadItem_PreviewMouseLeftButtonDown"
                                                  MouseMove="DownloadItem_MouseMove">
-                                        </ListBox>
-                                    </Grid>
+                                                </ListBox>
+                                            </Grid>
 
-                                    <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
+                                            <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
 
-                                    <Grid Grid.Row="2">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
+                                            <Grid Grid.Row="2">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
-                                        <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
+                                                <TextBlock Grid.Row="0" Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
+                                                <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
                                                   AllowDrop="True"
                                                   Drop="ProjectFolder_Drop"
                                                   PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
                                                   MouseMove="TreeView_MouseMove"
                                                   />
 
+                                            </Grid>
+                                        </Grid>
                                     </Grid>
-                                </Grid>
-                            </Grid>
-                        </TabItem>
+                                </TabItem>
 
-                        <TabItem Header="Claude Artifacts">
-                            <Border BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="0" Padding="4,4,0,0"
-                                    >
-                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
-                                    <ItemsControl ItemsSource="{Binding ArtifactManager.Artifacts}"/>
-                                </ScrollViewer>
-                            </Border>
-                        </TabItem>
+                                <TabItem Header="Filter Settings">
+                                    <Grid Margin="10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
 
-                        <TabItem Header="Filter Settings">
-                            <Grid Margin="10">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="Filter Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                                <TextBlock Grid.Row="0" Text="Filter Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
-
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBox Text="{Binding FilterViewModel.NewFilter, UpdateSourceTrigger=PropertyChanged}" 
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                            <TextBox Text="{Binding FilterViewModel.NewFilter, UpdateSourceTrigger=PropertyChanged}" 
                                      Width="200" Margin="0,0,10,0"/>
-                                    <Button Content="Add Filter" 
+                                            <Button Content="Add Filter" 
                                     Command="{Binding FilterViewModel.AddFilterCommand}" 
                                     Width="80"/>
-                                </StackPanel>
+                                        </StackPanel>
 
-                                <ListBox Grid.Row="2" ItemsSource="{Binding FilterViewModel.Filters}" Margin="0,0,0,10">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid >
-                                                <TextBlock Text="{Binding}" Margin="0,0,10,0" HorizontalAlignment="Left"/>
-                                                <Button Content="Remove"  HorizontalAlignment="Right"
+                                        <ListBox Grid.Row="2" ItemsSource="{Binding FilterViewModel.Filters}" Margin="0,0,0,10">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid >
+                                                        <TextBlock Text="{Binding}" Margin="0,0,10,0" HorizontalAlignment="Left"/>
+                                                        <Button Content="Remove"  HorizontalAlignment="Right"
                                                         Command="{Binding DataContext.FilterViewModel.RemoveFilterCommand, 
                                                                           RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
 
-                                <Button Grid.Row="3" Content="Apply Filters" 
+                                        <Button Grid.Row="3" Content="Apply Filters" 
                                 Command="{Binding FilterViewModel.ApplyFiltersCommand}" 
                                 HorizontalAlignment="Left"/>
-                            </Grid>
-                        </TabItem>
-                    </TabControl>
-                </Border>
+                                    </Grid>
+                                </TabItem>
+                            </TabControl>
+                        </Border>
 
-                <Button Width="32" Height="32"
+                        <Button Width="32" Height="32"
                         Margin="32,64,32,32"
                     HorizontalAlignment="Right" VerticalAlignment="Top" 
                     Click="SwapPanels_Click">
-                    <Button.Template>
-                        <ControlTemplate>
-                            <Border CornerRadius="4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            <Button.Template>
+                                <ControlTemplate>
+                                    <Border CornerRadius="4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
-                                <TextBlock Text="↔" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        <TextBlock Text="↔" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
                                    Margin="0,0,0,4"/>
-                            </Border>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </Grid>
             </Grid>
+            
         </Grid>
-    </Grid>
+    </Border>
 </Window>
