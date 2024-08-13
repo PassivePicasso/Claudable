@@ -9,6 +9,8 @@ public class WebViewManager
 
     public string LastVisitedUrl => _lastVisitedUrl;
 
+    public event EventHandler<string> DocsReceived;
+
     public WebViewManager(WebView2 webView, string initialUrl)
     {
         _webView = webView;
@@ -44,7 +46,29 @@ public class WebViewManager
     private void SetupWebViewEventHandlers()
     {
         _webView.SourceChanged += WebView_SourceChanged;
+        _webView.CoreWebView2.WebResourceResponseReceived += ProcessDocsResponse;
+
     }
+    private async void ProcessDocsResponse(object? sender, CoreWebView2WebResourceResponseReceivedEventArgs args)
+    {
+        var uri = args.Request.Uri;
+        if (!uri.Contains("claude")) return;
+
+        switch (uri)
+        {
+            case var _ when uri.EndsWith("docs"):
+                {
+                    var response = args.Response;
+                    var stream = await response.GetContentAsync();
+                    using var reader = new StreamReader(stream);
+                    var responseBody = reader.ReadToEnd();
+                    DocsReceived?.Invoke(this, responseBody);
+                }
+                break;
+        }
+    }
+
+
     private void WebView_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
     {
         _lastVisitedUrl = _webView.Source.ToString();

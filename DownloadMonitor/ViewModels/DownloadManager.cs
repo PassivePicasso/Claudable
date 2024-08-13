@@ -2,6 +2,7 @@ using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
@@ -34,9 +35,11 @@ namespace Claudable.Models
 
         private void WebView_DownloadStarting(object sender, CoreWebView2DownloadStartingEventArgs e)
         {
+            e.Handled = true;
+
             var download = new DownloadItem
             {
-                FileName = e.ResultFilePath,
+                Path = e.ResultFilePath,
                 Status = DownloadStatus.InProgress
             };
 
@@ -65,7 +68,7 @@ namespace Claudable.Models
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    download.BytesReceived = e.DownloadOperation.BytesReceived;
+                    download.BytesReceived = (ulong)e.DownloadOperation.BytesReceived;
                     if (e.DownloadOperation.TotalBytesToReceive.HasValue)
                         download.TotalBytes = e.DownloadOperation.TotalBytesToReceive.Value;
                 });
@@ -80,18 +83,20 @@ namespace Claudable.Models
 
     public class DownloadItem : INotifyPropertyChanged
     {
-        private string _fileName;
+        private string _path;
         private DownloadStatus _status;
-        private long _bytesReceived;
+        private ulong _bytesReceived;
         private ulong _totalBytes;
 
-        public string FileName
+        public string Path
         {
-            get => _fileName;
+            get => _path;
             set
             {
-                _fileName = value;
+                _path = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(FileName));
+                OnPropertyChanged(nameof(Directory));
             }
         }
 
@@ -102,10 +107,18 @@ namespace Claudable.Models
             {
                 _status = value;
                 OnPropertyChanged();
+                if (value == DownloadStatus.Completed)
+                {
+                    BytesReceived = TotalBytes;
+
+                    OnPropertyChanged(nameof(Path));
+                    OnPropertyChanged(nameof(FileName));
+                    OnPropertyChanged(nameof(Directory));
+                }
             }
         }
 
-        public long BytesReceived
+        public ulong BytesReceived
         {
             get => _bytesReceived;
             set
@@ -127,7 +140,10 @@ namespace Claudable.Models
             }
         }
 
-        public int Progress => TotalBytes > 0 ? (int)((double)BytesReceived / TotalBytes * 100) : 0;
+        public string FileName => System.IO.Path.GetFileName(_path);
+        public string Directory => System.IO.Path.GetDirectoryName(_path);
+
+        public int Progress => TotalBytes > 0 ? (int)((double)BytesReceived / TotalBytes * 100) : 100;
 
         public event PropertyChangedEventHandler PropertyChanged;
 

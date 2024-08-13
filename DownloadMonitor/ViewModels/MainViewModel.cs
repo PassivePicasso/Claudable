@@ -1,11 +1,10 @@
 using Claudable.Models;
+using Claudable.Services;
 using Microsoft.Win32;
 using Newtonsoft.Json;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
@@ -15,17 +14,29 @@ namespace Claudable.ViewModels
     {
         private ProjectFolder _rootProjectFolder;
         private FilterViewModel _filterViewModel;
-        private FileTrackingViewModel _fileChangeMonitorViewModel;
         private DownloadManager _downloadManager;
+        private ArtifactManager _artifactManager;
         private bool _isPanelsSwapped;
         private int _selectedTabIndex;
+        private FileWatcher _fileWatcher;
 
+        public ArtifactManager ArtifactManager
+        {
+            get => _artifactManager;
+            set
+            {
+                _artifactManager = value;
+                OnPropertyChanged();
+            }
+        }
         public ProjectFolder RootProjectFolder
         {
             get => _rootProjectFolder;
             set
             {
                 _rootProjectFolder = value;
+                ArtifactManager.RootProjectFolder = value;
+                InitializeFileWatcher();
                 OnPropertyChanged();
             }
         }
@@ -36,16 +47,6 @@ namespace Claudable.ViewModels
             set
             {
                 _filterViewModel = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public FileTrackingViewModel FileChangeMonitorViewModel
-        {
-            get => _fileChangeMonitorViewModel;
-            set
-            {
-                _fileChangeMonitorViewModel = value;
                 OnPropertyChanged();
             }
         }
@@ -89,16 +90,18 @@ namespace Claudable.ViewModels
         public ICommand SetProjectRootCommand { get; private set; }
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
+        public ICommand UpdateArtifactStatusCommand { get; private set; }
 
         public MainViewModel()
         {
             FilterViewModel = new FilterViewModel();
-            FileChangeMonitorViewModel = new FileTrackingViewModel();
             DownloadManager = new DownloadManager();
+            ArtifactManager = new ArtifactManager();
 
             SetProjectRootCommand = new RelayCommand(SetProjectRoot);
             SaveStateCommand = new RelayCommand(SaveState);
             LoadStateCommand = new RelayCommand(LoadState);
+            UpdateArtifactStatusCommand = new RelayCommand(UpdateArtifactStatus);
             FilterViewModel.ApplyFiltersCommand = new RelayCommand(ApplyFilters);
         }
 
@@ -118,6 +121,12 @@ namespace Claudable.ViewModels
             }
         }
 
+        private void InitializeFileWatcher()
+        {
+            _fileWatcher?.Dispose();
+            _fileWatcher = new FileWatcher(RootProjectFolder);
+        }
+
         private void LoadProjectStructure(ProjectFolder folder)
         {
             try
@@ -125,13 +134,13 @@ namespace Claudable.ViewModels
                 foreach (var directory in Directory.GetDirectories(folder.FullPath))
                 {
                     var subFolder = new ProjectFolder(Path.GetFileName(directory), directory);
-                    folder.SubFolders.Add(subFolder);
+                    folder.Children.Add(subFolder);
                     LoadProjectStructure(subFolder);
                 }
 
                 foreach (var file in Directory.GetFiles(folder.FullPath))
                 {
-                    folder.Files.Add(Path.GetFileName(file));
+                    folder.Children.Add(new ProjectFile(Path.GetFileName(file), file));
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -151,15 +160,43 @@ namespace Claudable.ViewModels
                 RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray());
                 OnPropertyChanged(nameof(RootProjectFolder));
             }
+        }
 
-            FileChangeMonitorViewModel.ApplyFilters(FilterViewModel.Filters);
+        private void UpdateArtifactStatus()
+        {
+            if (RootProjectFolder != null && ArtifactManager.Artifacts != null)
+            {
+                UpdateArtifactStatusRecursive(RootProjectFolder);
+            }
+        }
+
+        private void UpdateArtifactStatusRecursive(ProjectFolder folder)
+        {
+            foreach (var item in folder.Children)
+            {
+                if (item is ProjectFile file)
+                {
+                    var artifact = ArtifactManager.Artifacts.FirstOrDefault(a => a.FileName == file.Name);
+                    if (artifact != null)
+                    {
+                        file.UpdateFromArtifact(artifact);
+                    }
+                    else
+                    {
+                        file.AssociatedArtifact = null;
+                    }
+                }
+                else if (item is ProjectFolder subFolder)
+                {
+                    UpdateArtifactStatusRecursive(subFolder);
+                }
+            }
         }
 
         private void SaveState()
         {
             var state = new AppState
             {
-                FileChangeMonitorState = FileChangeMonitorViewModel.GetState(),
                 IsPanelsSwapped = IsPanelsSwapped,
                 SelectedTabIndex = SelectedTabIndex,
                 Filters = FilterViewModel.Filters.ToArray(),
@@ -177,7 +214,6 @@ namespace Claudable.ViewModels
                 string json = File.ReadAllText("appstate.json");
                 var state = JsonConvert.DeserializeObject<AppState>(json);
 
-                FileChangeMonitorViewModel.SetState(state.FileChangeMonitorState);
                 IsPanelsSwapped = state.IsPanelsSwapped;
                 SelectedTabIndex = state.SelectedTabIndex;
                 FilterViewModel.Filters = new ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
@@ -187,8 +223,8 @@ namespace Claudable.ViewModels
                     RootProjectFolder = new ProjectFolder(Path.GetFileName(state.ProjectRootPath), state.ProjectRootPath);
                     LoadProjectStructure(RootProjectFolder);
                 }
-
                 ApplyFilters();
+                UpdateArtifactStatus();
             }
         }
 

@@ -28,12 +28,15 @@
 
         <Grid x:Name="RightPanel" Grid.Column="2">
             <Grid>
+                <TextBlock Text="Claudable" HorizontalAlignment="Left" VerticalAlignment="Top"
+                           FontSize="22" 
+                           Margin="10"/>
+
+
                 <Border CornerRadius="16" Padding="16" BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="1"
-                        Margin="16">
-
+                        Margin="16,48,16,16">
                     <TabControl TabStripPlacement="Top" SelectedIndex="{Binding SelectedTabIndex}" >
-
-                        <TabItem Header="Download Monitor">
+                        <TabItem Header="Project">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -44,83 +47,56 @@
                                     <Button Content="Set Project Root" Command="{Binding SetProjectRootCommand}" Margin="0,0,10,0"/>
                                 </StackPanel>
 
-                                <Grid Grid.Row="1">
+                                <Grid Grid.Row="1" >
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
-                                        <RowDefinition Height="5"/>
+                                        <RowDefinition Height="50"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="5">
+                                    <Grid Grid.Row="0">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
                                         <TextBlock Grid.Row="0" Text="Downloads" FontWeight="Bold" Margin="0,0,0,5"/>
-                                        <ListBox Grid.Row="1" ItemsSource="{Binding DownloadManager.Downloads}"
-                                             PreviewMouseLeftButtonDown="DownloadItem_PreviewMouseLeftButtonDown"
-                                             MouseMove="DownloadItem_MouseMove">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{Binding FileName}"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Status}" Margin="10,0"/>
-                                                        <ProgressBar Grid.Column="2" Width="100" Height="15" Value="{Binding Progress, Mode=OneWay}" Maximum="100"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
+                                        <ListBox Grid.Row="1" 
+                                                 ItemsSource="{Binding DownloadManager.Downloads}"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 PreviewMouseLeftButtonDown="DownloadItem_PreviewMouseLeftButtonDown"
+                                                 MouseMove="DownloadItem_MouseMove">
                                         </ListBox>
                                     </Grid>
 
-                                    <GridSplitter Grid.Row="1" Height="5" Margin="5,02,-15,-4" HorizontalAlignment="Stretch"/>
+                                    <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
 
-                                    <Grid Grid.Row="2" Margin="5">
+                                    <Grid Grid.Row="2">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
                                         <TextBlock Grid.Row="0" Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
-                                        <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.SubFolders}"/>
+                                        <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
+                                                  AllowDrop="True"
+                                                  Drop="ProjectFolder_Drop"
+                                                  PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
+                                                  MouseMove="TreeView_MouseMove"
+                                                  />
+
                                     </Grid>
                                 </Grid>
                             </Grid>
                         </TabItem>
 
-                        <TabItem Header="File Change Monitor">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-
-                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBox Text="{Binding FileChangeMonitorViewModel.SelectedFolder, Mode=OneWay}" 
-                                     Width="300" IsReadOnly="True"/>
-                                    <Button Content="Browse" Margin="10,0,0,0"
-                                    Click="BrowseMonitoredFolderButton_Click"/>
-                                </StackPanel>
-
-                                <ListBox x:Name="ChangedFilesListBox" Grid.Row="1" 
-                                 ItemsSource="{Binding FileChangeMonitorViewModel.TrackedFiles}"
-                                 SelectionMode="Extended"
-                                 MouseDoubleClick="ChangedFilesListBox_MouseDoubleClick">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding FileName}" />
-                                                <TextBlock Text="{Binding LastModified, StringFormat=' (Last modified: {0})'}" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </Grid>
+                        <TabItem Header="Claude Artifacts">
+                            <Border BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="0" Padding="4,4,0,0"
+                                    >
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
+                                    <ItemsControl ItemsSource="{Binding ArtifactManager.Artifacts}"/>
+                                </ScrollViewer>
+                            </Border>
                         </TabItem>
 
                         <TabItem Header="Filter Settings">
@@ -145,13 +121,13 @@
                                 <ListBox Grid.Row="2" ItemsSource="{Binding FilterViewModel.Filters}" Margin="0,0,0,10">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding}" Margin="0,0,10,0"/>
-                                                <Button Content="Remove" 
-                                                Command="{Binding DataContext.FilterViewModel.RemoveFilterCommand, 
-                                                          RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"/>
-                                            </StackPanel>
+                                            <Grid >
+                                                <TextBlock Text="{Binding}" Margin="0,0,10,0" HorizontalAlignment="Left"/>
+                                                <Button Content="Remove"  HorizontalAlignment="Right"
+                                                        Command="{Binding DataContext.FilterViewModel.RemoveFilterCommand, 
+                                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
@@ -165,7 +141,7 @@
                 </Border>
 
                 <Button Width="32" Height="32"
-                        Margin="32"
+                        Margin="32,64,32,32"
                     HorizontalAlignment="Right" VerticalAlignment="Top" 
                     Click="SwapPanels_Click">
                     <Button.Template>

@@ -1,17 +1,27 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:vm="clr-namespace:Claudable.ViewModels"
+                    xmlns:models="clr-namespace:Claudable.Models"
+                    xmlns:controls="clr-namespace:Claudable.Controls"
+                    xmlns:converters="clr-namespace:Claudable.Converters"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Converters -->
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <converters:FileSizeConverter x:Key="FileSizeConverter" />
+    <converters:SpeedConverter x:Key="SpeedConverter" />
+    <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter"/>
+    <converters:ChooseConverter x:Key="UploadOrDownload" True="↑" False="↓"/>
+    <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
 
     <!-- Colors -->
     <Color x:Key="ClaudePrimaryColor">#1a1915</Color>
     <Color x:Key="ClaudeSecondaryColor">#2f2f2c</Color>
     <Color x:Key="ClaudeBackgroundColor">#2d2d2a</Color>
-    <Color x:Key="ClaudeTextColor">#FFFFFF</Color>
+    <Color x:Key="ClaudeTextColor">#ceccc5</Color>
     <Color x:Key="ClaudeBorderColor">#3e3e39</Color>
     <Color x:Key="ClaudeHighlightColor">#53524c</Color>
+    <Color x:Key="ClaudeUpdateArtifactColor">#53724c</Color>
+    <Color x:Key="ClaudeUpdateLocalColor">#73524c</Color>
 
     <!-- Brushes -->
     <SolidColorBrush x:Key="ClaudePrimaryBrush" Color="{StaticResource ClaudePrimaryColor}"/>
@@ -20,6 +30,12 @@
     <SolidColorBrush x:Key="ClaudeTextBrush" Color="{StaticResource ClaudeTextColor}"/>
     <SolidColorBrush x:Key="ClaudeBorderBrush" Color="{StaticResource ClaudeBorderColor}"/>
     <SolidColorBrush x:Key="ClaudeHighlightBrush" Color="{StaticResource ClaudeHighlightColor}"/>
+    <SolidColorBrush x:Key="ClaudeUpdateArtifactBrush" Color="{StaticResource ClaudeUpdateArtifactColor}"/>
+    <SolidColorBrush x:Key="ClaudeUpdateLocalBrush" Color="{StaticResource ClaudeUpdateLocalColor}"/>
+
+    <converters:BoolToSolidColorBrushConverter x:Key="BoolToColorConverter" 
+                                               True="{StaticResource ClaudeUpdateArtifactBrush}" 
+                                               False="{StaticResource ClaudeUpdateLocalBrush}" />
 
     <!-- Fonts -->
     <FontFamily x:Key="ClaudeFont">Söhne, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, "Helvetica Neue", Arial</FontFamily>
@@ -30,6 +46,10 @@
         <Setter Property="Control.Foreground" Value="{StaticResource ClaudeTextBrush}"/>
         <Setter Property="Control.FontFamily" Value="{StaticResource ClaudeFont}"/>
         <Setter Property="Control.FontSize" Value="14"/>
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource ClaudeBaseStyle}">
+
     </Style>
 
     <!-- Button Style -->
@@ -45,13 +65,15 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="4">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ClaudeSecondaryBrush}"/>
                 <Setter Property="BorderBrush" Value="{StaticResource ClaudeHighlightBrush}"/>
             </Trigger>
         </Style.Triggers>
@@ -74,7 +96,8 @@
 
     <!-- ListBoxItem Style -->
     <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource ClaudeBaseStyle}">
-        <Setter Property="Padding" Value="5"/>
+        <Setter Property="Padding" Value="5,2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{StaticResource ClaudeHighlightBrush}"/>
@@ -92,11 +115,9 @@
     <!-- TreeViewItem Style -->
     <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource ClaudeBaseStyle}">
         <Setter Property="Padding" Value="5,2"/>
-        <Style.Triggers>
-            <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{StaticResource ClaudeHighlightBrush}"/>
-            </Trigger>
-        </Style.Triggers>
+        <Setter Property="AllowDrop" Value="True"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
 
     <!-- TabControl Style -->
@@ -138,16 +159,7 @@
     <!-- GridSplitter Style -->
     <Style TargetType="{x:Type GridSplitter}" BasedOn="{StaticResource ClaudeBaseStyle}">
         <Setter Property="Background" Value="{StaticResource ClaudeBorderBrush}"/>
-        <Setter Property="Width" Value="1"/>
     </Style>
-
-    <!-- ProjectFolder Template -->
-    <HierarchicalDataTemplate DataType="{x:Type vm:ProjectFolder}" ItemsSource="{Binding SubFolders}">
-        <StackPanel Orientation="Horizontal">
-            <Image Source="/Images/folder.png" Width="16" Height="16" Margin="0,0,5,0"/>
-            <TextBlock Text="{Binding Name}" Foreground="{StaticResource ClaudeTextBrush}"/>
-        </StackPanel>
-    </HierarchicalDataTemplate>
 
     <!-- Window Style -->
     <Style TargetType="{x:Type Window}">
@@ -162,5 +174,148 @@
         <Setter Property="BorderThickness" Value="0,0,1,0"/>
         <Setter Property="CornerRadius" Value="0,12,12,0"/>
     </Style>
+
+    <Style x:Key="SmallButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Padding" Value="5,2"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <DataTemplate DataType="{x:Type models:DownloadItem}">
+        <Border BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="0,0,0,1" Padding="10,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
+                    <controls:FileSystemIcon Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" 
+                                         Width="16" Height="16" Margin="0,0,10,0"
+                                         Path="{Binding Path=Path}"/>
+                    <TextBlock 
+                           Text="{Binding Path}" 
+                           FontWeight="Bold" 
+                           TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <!-- Download Progress -->
+                <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="2">
+                    <ProgressBar Value="{Binding Progress, Mode=OneWay}" 
+                                 Background="{StaticResource ClaudeBackgroundBrush}"
+                                 Foreground="{StaticResource ClaudeHighlightBrush}"
+                                 Maximum="100" 
+                                 Height="14"/>
+                    <TextBlock Text="{Binding Progress, Mode=OneWay, StringFormat={}{0}%}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="10"/>
+                </Grid>
+
+                <!-- Download Status -->
+                <TextBlock Grid.Row="1" Grid.Column="2" 
+                       Text="{Binding Status}" 
+                       FontStyle="Italic"
+                       HorizontalAlignment="Right"
+                           Margin="0,-1,10,0"/>
+
+                <!-- Cancel Button -->
+                <Button Grid.Row="0" Grid.Column="2" 
+                    Content="Cancel" 
+                    Command="{Binding DataContext.CancelDownloadCommand, 
+                              RelativeSource={RelativeSource AncestorType=ListBox}}"
+                    CommandParameter="{Binding}"
+                    Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"
+                    Style="{StaticResource SmallButtonStyle}"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ArtifactViewModel}" >
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border BorderBrush="{StaticResource ClaudeBorderBrush}" 
+                    Background="{StaticResource ClaudeBackgroundBrush}"
+                    BorderThickness="2,2,0,2" CornerRadius="8,0,0,8" 
+                    Padding="4,0,8,0" Margin="0,0,-2,5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Filename:"     HorizontalAlignment="Right"/>
+                    <TextBlock Text="Created at:"   HorizontalAlignment="Right"/>
+                    <TextBlock Text="Project UUID:" HorizontalAlignment="Right"/>
+                    <TextBlock Text="File UUID:"    HorizontalAlignment="Right"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1"
+                    BorderBrush="{StaticResource ClaudeBorderBrush}" 
+                    Background="{StaticResource ClaudeBorderBrush}"
+                    BorderThickness="1,1,0,1" CornerRadius="0,8,8,0" 
+                    Padding="8,2,8,2" Margin="-2,0,0,5">
+                <StackPanel Orientation="Vertical" Grid.Column="1" HorizontalAlignment="Stretch">
+                    <TextBlock Text="{Binding Path=FileName, Mode=OneWay}"/>
+                    <TextBlock Text="{Binding Path=CreatedAt, Mode=OneWay}"/>
+                    <TextBlock Text="{Binding Path=ProjectUuid, Mode=OneWay}"/>
+                    <TextBlock Text="{Binding Path=Uuid, Mode=OneWay}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- ProjectFolder Template -->
+    <HierarchicalDataTemplate DataType="{x:Type vm:ProjectFolder}" ItemsSource="{Binding Children}">
+        <StackPanel Orientation="Horizontal" MinHeight="20">
+            <controls:FileSystemIcon Path="{Binding FullPath}" Width="16" Height="16" Margin="0,0,5,0"/>
+            <TextBlock Text="{Binding Name}" Foreground="{StaticResource ClaudeTextBrush}"/>
+        </StackPanel>
+    </HierarchicalDataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:ProjectFile}">
+        <Grid Margin="2" Height="18" HorizontalAlignment="Stretch" Grid.IsSharedSizeScope="True" 
+              Background="Transparent">
+            <Grid.ToolTip>
+                <StackPanel Orientation="Vertical" Margin="2">
+                    <StackPanel Orientation="Horizontal" Margin="2">
+                        <TextBlock Text="   Local: " FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}"/>
+                        <TextBlock Text="{Binding LocalLastModified, StringFormat={}{0:g}}" FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}" Margin="0,0,10,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="2">
+                        <TextBlock Text="Artifact: " FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}"/>
+                        <TextBlock Text="{Binding ArtifactLastModified, StringFormat={}{0:g}}" FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid.ToolTip>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Icon"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SyncState"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Status"/>
+                <ColumnDefinition Width="*" MinWidth="200"    SharedSizeGroup="FileName"/>
+            </Grid.ColumnDefinitions>
+
+            <controls:FileSystemIcon Grid.Column="2" Path="{Binding FullPath}" Width="16" Height="16"/>
+
+            <TextBlock Grid.Column="3" Text="{Binding Name}" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
+
+            <Border Grid.Column="0" Grid.ColumnSpan="2" Width="34"/>
+
+            <Border Grid.Column="0" CornerRadius="4" Width="16" Height="16"
+                    Background="{Binding IsLocalNewer, Converter={StaticResource BoolToColorConverter}}"
+                    Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding IsLocalNewer, Converter={StaticResource UploadOrDownload}}" 
+                           FontSize="16" Foreground="{StaticResource ClaudeTextBrush}" 
+                           Margin="0,-4,0,0"
+                           HorizontalAlignment="Center"/>
+            </Border>
+            <Border Grid.Column="1" CornerRadius="4" Width="16"  Height="16"
+                    Background="{StaticResource ClaudeHighlightBrush}"
+                    Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="A" FontSize="10" Foreground="{StaticResource ClaudeTextBrush}" HorizontalAlignment="Center"/>
+            </Border>
+        </Grid>
+    </DataTemplate>
 
 </ResourceDictionary>

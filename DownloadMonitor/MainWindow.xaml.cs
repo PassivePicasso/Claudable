@@ -8,14 +8,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 
 namespace Claudable
 {
     public partial class MainWindow : Window
     {
         private readonly MainViewModel _viewModel;
-        private readonly FileWatcherService _fileWatcherService;
         private readonly WebViewManager _webViewManager;
         private readonly WindowStateManager _windowStateManager;
         private readonly IDialogService _dialogService;
@@ -30,15 +28,15 @@ namespace Claudable
 
             _dialogService = new DialogService();
             _webViewManager = new WebViewManager(ClaudeWebView, "https://claude.ai");
+            _webViewManager.DocsReceived += _webViewManager_DocsReceived;
             _windowStateManager = new WindowStateManager(this, _viewModel, _webViewManager);
-            _fileWatcherService = new FileWatcherService(
-                OnFileCreated,
-                OnFileChanged,
-                OnFileRenamed,
-                OnFileDeleted
-            );
 
             InitializeAsync();
+        }
+
+        private void _webViewManager_DocsReceived(object? sender, string e)
+        {
+            _viewModel.ArtifactManager.LoadArtifacts(e);
         }
 
         private async void InitializeAsync()
@@ -46,18 +44,10 @@ namespace Claudable
             await _webViewManager.InitializeAsync();
             _windowStateManager.LoadState();
             _viewModel.LoadStateCommand.Execute(null);
-            InitializeFileWatchers();
             ApplyViewModelState();
 
             // Initialize DownloadManager with WebView2
             _viewModel.DownloadManager.Initialize(ClaudeWebView.CoreWebView2);
-        }
-
-        private void InitializeFileWatchers()
-        {
-            string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            _fileWatcherService.InitializeDownloadWatcher(downloadsPath);
-            _fileWatcherService.InitializeChangeWatcher(_viewModel.FileChangeMonitorViewModel.SelectedFolder);
         }
 
         private void ApplyViewModelState()
@@ -143,29 +133,6 @@ namespace Claudable
             }
         }
 
-        private void BrowseMonitoredFolderButton_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFolderDialog
-            {
-                Title = "Select Folder to Monitor"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                _viewModel.FileChangeMonitorViewModel.SelectedFolder = dialog.FolderName;
-                _fileWatcherService.InitializeChangeWatcher(_viewModel.FileChangeMonitorViewModel.SelectedFolder);
-                _viewModel.FileChangeMonitorViewModel.Clear();
-            }
-        }
-
-        private void FileListBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Delete)
-            {
-                _viewModel.FileChangeMonitorViewModel.DeleteSelectedFilesCommand.Execute(null);
-            }
-        }
-
         private void ChangedFilesListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             var listBox = (ListBox)sender;
@@ -189,50 +156,19 @@ namespace Claudable
             }
         }
 
-        private void OnFileCreated(string filePath)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                _viewModel.FileChangeMonitorViewModel.AddFile(filePath);
-            });
-        }
-
-        private void OnFileChanged(string filePath)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                _viewModel.FileChangeMonitorViewModel.UpdateFile(filePath);
-            });
-        }
-
-        private void OnFileRenamed(string oldPath, string newPath)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                _viewModel.FileChangeMonitorViewModel.RemoveFile(oldPath);
-                _viewModel.FileChangeMonitorViewModel.AddFile(newPath);
-            });
-        }
-
-        private void OnFileDeleted(string filePath)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                _viewModel.FileChangeMonitorViewModel.RemoveFile(filePath);
-            });
-        }
-
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
             _windowStateManager.SaveState();
             _viewModel.SaveStateCommand.Execute(null);
-            _fileWatcherService.Dispose();
         }
 
         private void DownloadItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _startPoint = e.GetPosition(null);
+            if (sender is ListBoxItem item)
+            {
+                DragDrop.DoDragDrop(item, item.DataContext, DragDropEffects.Move);
+            }
         }
 
         private void DownloadItem_MouseMove(object sender, MouseEventArgs e)
@@ -259,6 +195,74 @@ namespace Claudable
             }
         }
 
+        private void ProjectFolder_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(DownloadItem)))
+            {
+                DownloadItem downloadItem = e.Data.GetData(typeof(DownloadItem)) as DownloadItem;
+                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+
+                if (treeViewItem != null)
+                {
+                    FileSystemItem targetItem = treeViewItem.DataContext as FileSystemItem;
+
+                    if (targetItem != null && targetItem.IsFolder && downloadItem != null)
+                    {
+                        ProjectFolder targetFolder = targetItem as ProjectFolder;
+                        string sourceFilePath = downloadItem.Path;
+                        string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
+
+                        try
+                        {
+                            File.Move(sourceFilePath, destinationFilePath);
+                            _viewModel.DownloadManager.Downloads.Remove(downloadItem);
+
+                            // Add the new file to the target folder's children
+                            ProjectFile newFile = new ProjectFile(Path.GetFileName(destinationFilePath), destinationFilePath);
+                            targetFolder.Children.Add(newFile);
+
+                            // Optionally, you can sort the children after adding the new file
+                            SortFolderChildren(targetFolder);
+                        }
+                        catch (Exception ex)
+                        {
+                            _dialogService.ShowError($"Error moving file: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+        private void TreeView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _startPoint = e.GetPosition(null);
+        }
+
+        private void TreeView_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    TreeView treeView = sender as TreeView;
+                    TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+
+                    if (treeViewItem != null)
+                    {
+                        FileSystemItem fileSystemItem = treeViewItem.DataContext as FileSystemItem;
+                        if (fileSystemItem != null && !fileSystemItem.IsFolder)
+                        {
+                            string[] files = { fileSystemItem.FullPath };
+                            DataObject dragData = new DataObject(DataFormats.FileDrop, files);
+                            DragDrop.DoDragDrop(treeViewItem, dragData, DragDropEffects.Copy);
+                        }
+                    }
+                }
+            }
+        }
         private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
         {
             do
@@ -273,34 +277,14 @@ namespace Claudable
             return null;
         }
 
-        private void ProjectFolder_Drop(object sender, DragEventArgs e)
+
+        private void SortFolderChildren(ProjectFolder folder)
         {
-            if (e.Data.GetDataPresent("DownloadItem"))
+            var sortedChildren = folder.Children.OrderBy(c => !c.IsFolder).ThenBy(c => c.Name).ToList();
+            folder.Children.Clear();
+            foreach (var child in sortedChildren)
             {
-                DownloadItem downloadItem = e.Data.GetData("DownloadItem") as DownloadItem;
-                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
-
-                if (treeViewItem != null)
-                {
-                    ProjectFolder targetFolder = treeViewItem.DataContext as ProjectFolder;
-
-                    if (targetFolder != null && downloadItem != null)
-                    {
-                        string sourceFilePath = downloadItem.FileName;
-                        string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
-
-                        try
-                        {
-                            File.Move(sourceFilePath, destinationFilePath);
-                            _viewModel.DownloadManager.Downloads.Remove(downloadItem);
-                            targetFolder.Files.Add(Path.GetFileName(destinationFilePath));
-                        }
-                        catch (Exception ex)
-                        {
-                            _dialogService.ShowError($"Error moving file: {ex.Message}");
-                        }
-                    }
-                }
+                folder.Children.Add(child);
             }
         }
     }
