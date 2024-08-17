@@ -1,11 +1,13 @@
 using Claudable.Models;
 using Claudable.Services;
+using Claudable.Utilities;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 
 namespace Claudable.ViewModels
@@ -87,10 +89,13 @@ namespace Claudable.ViewModels
             }
         }
 
+        public ObservableCollection<SvgArtifactViewModel> SvgArtifacts => ArtifactManager.SvgArtifacts;
+
         public ICommand SetProjectRootCommand { get; private set; }
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
         public ICommand UpdateArtifactStatusCommand { get; private set; }
+        public ICommand DropSvgArtifactCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -103,8 +108,8 @@ namespace Claudable.ViewModels
             LoadStateCommand = new RelayCommand(LoadState);
             UpdateArtifactStatusCommand = new RelayCommand(UpdateArtifactStatus);
             FilterViewModel.ApplyFiltersCommand = new RelayCommand(ApplyFilters);
+            DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
         }
-
         private void SetProjectRoot()
         {
             var dialog = new OpenFolderDialog
@@ -133,14 +138,14 @@ namespace Claudable.ViewModels
             {
                 foreach (var directory in Directory.GetDirectories(folder.FullPath))
                 {
-                    var subFolder = new ProjectFolder(Path.GetFileName(directory), directory);
-                    folder.Children.Add(subFolder);
+                    var subFolder = new ProjectFolder(Path.GetFileName(directory), directory, folder);
+                    folder.AddChild(subFolder);
                     LoadProjectStructure(subFolder);
                 }
 
                 foreach (var file in Directory.GetFiles(folder.FullPath))
                 {
-                    folder.Children.Add(new ProjectFile(Path.GetFileName(file), file));
+                    folder.AddChild(new ProjectFile(Path.GetFileName(file), file, folder));
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -153,6 +158,56 @@ namespace Claudable.ViewModels
             }
         }
 
+        private void DropSvgArtifact(object parameter)
+        {
+            if (parameter is Tuple<SvgArtifactViewModel, FileSystemItem, string> dropInfo)
+            {
+                var svgArtifact = dropInfo.Item1;
+                var targetItem = dropInfo.Item2;
+                var fileType = dropInfo.Item3;
+
+                ProjectFolder targetFolder;
+                if (targetItem is ProjectFile projectFile)
+                {
+                    targetFolder = projectFile.Parent as ProjectFolder;
+                }
+                else
+                {
+                    targetFolder = targetItem as ProjectFolder;
+                }
+
+                if (targetFolder == null)
+                {
+                    MessageBox.Show("Invalid drop target. Please drop on a folder or file in the project structure.");
+                    return;
+                }
+
+                string fileName = Path.GetFileNameWithoutExtension(svgArtifact.Name) + "." + fileType;
+                string fullPath = Path.Combine(targetFolder.FullPath, fileName);
+
+                try
+                {
+                    if (fileType == "png")
+                    {
+                        SVGRasterizer.GenerateArtifactIcon(fullPath, svgArtifact.Content);
+                    }
+                    else if (fileType == "ico")
+                    {
+                        SVGRasterizer.GenerateArtifactIcon(fullPath, svgArtifact.Content, true);
+                    }
+
+                    // Add the new file to the project structure
+                    var newFile = new ProjectFile(fileName, fullPath, targetFolder);
+                    targetFolder.AddChild(newFile);
+
+                    MessageBox.Show($"File saved successfully: {fullPath}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving file: {ex.Message}");
+                }
+            }
+        }
         private void ApplyFilters()
         {
             if (RootProjectFolder != null)

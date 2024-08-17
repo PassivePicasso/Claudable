@@ -40,8 +40,8 @@
                 </Grid.ColumnDefinitions>
 
                 <Image Grid.Column="0" Source="/Resources/claudable_icon.png" Width="20" Height="20" Margin="6,0,0,0"/>
-                
-                <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin=",0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
+
+                <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin="0,0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
 
                 <Button Grid.Column="2" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
                     <Path Data="M0,6 H10" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
@@ -69,124 +69,151 @@
 
                 <Grid x:Name="RightPanel" Grid.Column="2">
                     <Grid>
-
-
                         <Border CornerRadius="16" Padding="16" BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="1"
                         Margin="16,48,16,16">
-                            <TabControl TabStripPlacement="Top" SelectedIndex="{Binding SelectedTabIndex}" >
-                                <TabItem Header="Project">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition Height="5" />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
 
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                                            <Button Content="Set Project Root" Command="{Binding SetProjectRootCommand}" Margin="0,0,10,0"/>
-                                        </StackPanel>
+                                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Height="5"/>
 
-                                        <Grid Grid.Row="1" >
+                                <TabControl Grid.Row="2" TabStripPlacement="Top" SelectedIndex="{Binding SelectedTabIndex}" >
+                                    <TabItem Header="Downloads">
+                                        <Grid Grid.Row="0" Margin="10">
                                             <Grid.RowDefinitions>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="50"/>
+                                                <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="*"/>
                                             </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Downloads" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                                            <Grid Grid.Row="0">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="*"/>
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Text="Downloads" FontWeight="Bold" Margin="0,0,0,5"/>
-                                                <ListBox Grid.Row="1" 
+                                            <ListBox Grid.Row="1" 
                                                  ItemsSource="{Binding DownloadManager.Downloads}"
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  PreviewMouseLeftButtonDown="DownloadItem_PreviewMouseLeftButtonDown"
                                                  MouseMove="DownloadItem_MouseMove">
-                                                </ListBox>
-                                            </Grid>
+                                            </ListBox>
+                                        </Grid>
+                                    </TabItem>
 
-                                            <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
+                                    <TabItem Header="Filter Settings">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
 
-                                            <Grid Grid.Row="2">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="*"/>
-                                                </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Filter Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                                                <TextBlock Grid.Row="0" Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
-                                                <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
+                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                                <TextBox Text="{Binding FilterViewModel.NewFilter, UpdateSourceTrigger=PropertyChanged}" 
+                                     Width="200" Margin="0,0,10,0"/>
+                                                <Button Content="Add Filter" 
+                                    Command="{Binding FilterViewModel.AddFilterCommand}" 
+                                    Width="80"/>
+                                            </StackPanel>
+
+                                            <ListBox Grid.Row="2" ItemsSource="{Binding FilterViewModel.Filters}" Margin="0,0,0,10">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid >
+                                                            <TextBlock Text="{Binding}" Margin="0,0,10,0" HorizontalAlignment="Left"/>
+                                                            <Button Content="Remove"  HorizontalAlignment="Right"
+                                                        Command="{Binding DataContext.FilterViewModel.RemoveFilterCommand, 
+                                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+
+                                            <Button Grid.Row="3" Content="Apply Filters" 
+                                Command="{Binding FilterViewModel.ApplyFiltersCommand}" 
+                                HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </TabItem>
+
+                                    <TabItem Header="SVG Artifacts">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Text="SVG Artifacts" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                                            <ListBox Grid.Row="1" ItemsSource="{Binding SvgArtifacts}"
+                                                     PreviewMouseLeftButtonDown="SvgArtifact_PreviewMouseLeftButtonDown"
+                                                     MouseMove="SvgArtifact_MouseMove">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <Image Grid.Column="0" Source="{Binding RenderedImage}" Width="50" Height="50" Margin="0,0,10,0"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </TabItem>
+                                </TabControl>
+                                <Grid Grid.Row="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <Button Width="32" Height="32" Margin="0,-12,0,0"
+                                            HorizontalAlignment="Right" VerticalAlignment="Top" 
+                                            Click="SwapPanels_Click" Content="↔">
+                                        <Button.Template>
+                                            <ControlTemplate>
+                                                <Border CornerRadius="4" Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                                    <TextBlock Text="↔" FontSize="16" FontWeight="Bold" 
+                                                               VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                                               Margin="0,0,0,4" IsHitTestVisible="False"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button Content="Set Project Root" 
+                                            VerticalAlignment="Top"  VerticalContentAlignment="Top" 
+                                            Width="120" Height="24"
+                                            Padding="0,-4,0,0"
+                                            Margin="0,-5,0,0"
+                                            Command="{Binding SetProjectRootCommand}" />
+                                    <TextBlock Grid.Row="0" Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
                                                   AllowDrop="True"
                                                   Drop="ProjectFolder_Drop"
                                                   PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
                                                   MouseMove="TreeView_MouseMove"
                                                   />
 
-                                            </Grid>
-                                        </Grid>
-                                    </Grid>
-                                </TabItem>
+                                </Grid>
+                            </Grid>
 
-                                <TabItem Header="Filter Settings">
-                                    <Grid Margin="10">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <TextBlock Grid.Row="0" Text="Filter Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
-
-                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                            <TextBox Text="{Binding FilterViewModel.NewFilter, UpdateSourceTrigger=PropertyChanged}" 
-                                     Width="200" Margin="0,0,10,0"/>
-                                            <Button Content="Add Filter" 
-                                    Command="{Binding FilterViewModel.AddFilterCommand}" 
-                                    Width="80"/>
-                                        </StackPanel>
-
-                                        <ListBox Grid.Row="2" ItemsSource="{Binding FilterViewModel.Filters}" Margin="0,0,0,10">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid >
-                                                        <TextBlock Text="{Binding}" Margin="0,0,10,0" HorizontalAlignment="Left"/>
-                                                        <Button Content="Remove"  HorizontalAlignment="Right"
-                                                        Command="{Binding DataContext.FilterViewModel.RemoveFilterCommand, 
-                                                                          RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-
-                                        <Button Grid.Row="3" Content="Apply Filters" 
-                                Command="{Binding FilterViewModel.ApplyFiltersCommand}" 
-                                HorizontalAlignment="Left"/>
-                                    </Grid>
-                                </TabItem>
-                            </TabControl>
                         </Border>
 
-                        <Button Width="32" Height="32"
-                        Margin="32,64,32,32"
-                    HorizontalAlignment="Right" VerticalAlignment="Top" 
-                    Click="SwapPanels_Click">
-                            <Button.Template>
-                                <ControlTemplate>
-                                    <Border CornerRadius="4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                                        <TextBlock Text="↔" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                   Margin="0,0,0,4"/>
-                                    </Border>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
+
+
                     </Grid>
                 </Grid>
             </Grid>
-            
+
         </Grid>
     </Border>
 </Window>

@@ -65,10 +65,11 @@ namespace Claudable.ViewModels
             }
         }
 
-        public ProjectFile(string name, string fullPath) : base()
+        public ProjectFile(string name, string fullPath, FileSystemItem parent = null) : base()
         {
             Name = name;
             FullPath = fullPath;
+            Parent = parent;
             LocalLastModified = System.IO.File.GetLastWriteTime(fullPath);
         }
 

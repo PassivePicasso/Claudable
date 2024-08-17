@@ -207,9 +207,61 @@ namespace Claudable
             }
         }
 
+        private void SvgArtifact_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListBoxItem item)
+            {
+                _startPoint = e.GetPosition(null);
+            }
+        }
+
+        private void SvgArtifact_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point mousePos = e.GetPosition(null);
+                Vector diff = _startPoint - mousePos;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    ListBox listBox = sender as ListBox;
+                    ListBoxItem listBoxItem = FindAncestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+
+                    if (listBoxItem != null)
+                    {
+                        SvgArtifactViewModel svgArtifact = listBoxItem.DataContext as SvgArtifactViewModel;
+
+                        if (svgArtifact != null)
+                        {
+                            DataObject dragData = new DataObject("SvgArtifact", svgArtifact);
+                            DragDrop.DoDragDrop(listBoxItem, dragData, DragDropEffects.Copy);
+                        }
+                    }
+                }
+            }
+        }
+
         private void ProjectFolder_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(DownloadItem)))
+            if (e.Data.GetDataPresent("SvgArtifact"))
+            {
+                SvgArtifactViewModel svgArtifact = e.Data.GetData("SvgArtifact") as SvgArtifactViewModel;
+                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+
+                if (treeViewItem != null && svgArtifact != null)
+                {
+                    FileSystemItem targetItem = treeViewItem.DataContext as FileSystemItem;
+
+                    if (targetItem != null)
+                    {
+                        string fileType = Keyboard.Modifiers == ModifierKeys.Control ? "ico" : "png";
+                        var dropInfo = new Tuple<SvgArtifactViewModel, FileSystemItem, string>(svgArtifact, targetItem, fileType);
+                        _viewModel.DropSvgArtifactCommand.Execute(dropInfo);
+                    }
+                }
+            }
+            else if (e.Data.GetDataPresent(typeof(DownloadItem)))
             {
                 DownloadItem downloadItem = e.Data.GetData(typeof(DownloadItem)) as DownloadItem;
                 TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);

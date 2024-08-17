@@ -11,6 +11,7 @@ namespace Claudable.Models
         private string _fullPath;
         private bool _isVisible = true;
         private ArtifactViewModel _associatedArtifact;
+        private FileSystemItem _parent;
 
         public string Name
         {
@@ -36,6 +37,11 @@ namespace Claudable.Models
             set { _associatedArtifact = value; OnPropertyChanged(); }
         }
 
+        public FileSystemItem Parent
+        {
+            get => _parent;
+            set { _parent = value; OnPropertyChanged(); }
+        }
         public ObservableCollection<FileSystemItem> Children { get; } = new ObservableCollection<FileSystemItem>();
 
         public bool IsFolder => this is ProjectFolder;

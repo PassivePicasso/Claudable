@@ -1,12 +1,9 @@
 ﻿using Microsoft.Web.WebView2.Wpf;
 using Newtonsoft.Json;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace Claudable.ViewModels
 {
@@ -14,6 +11,7 @@ namespace Claudable.ViewModels
     {
         private WebView2 webView;
         private ObservableCollection<ArtifactViewModel> _artifacts;
+        private ObservableCollection<SvgArtifactViewModel> _svgArtifacts;
         private ProjectFolder _rootProjectFolder;
 
         public ObservableCollection<ArtifactViewModel> Artifacts
@@ -22,6 +20,16 @@ namespace Claudable.ViewModels
             set
             {
                 _artifacts = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ObservableCollection<SvgArtifactViewModel> SvgArtifacts
+        {
+            get => _svgArtifacts;
+            set
+            {
+                _svgArtifacts = value;
                 OnPropertyChanged();
             }
         }
@@ -41,6 +49,7 @@ namespace Claudable.ViewModels
         public ArtifactManager()
         {
             Artifacts = new ObservableCollection<ArtifactViewModel>();
+            SvgArtifacts = new ObservableCollection<SvgArtifactViewModel>();
         }
 
         public void LoadArtifacts(string artifactsJson)
@@ -54,8 +63,7 @@ namespace Claudable.ViewModels
 
                     foreach (var artifact in artifacts)
                     {
-                        artifact.CreatedAt = artifact.CreatedAt.ToLocalTime();
-                        AssociateArtifactWithProjectFile(artifact);
+                        ProcessArtifact(artifact);
                     }
 
                     Artifacts = new ObservableCollection<ArtifactViewModel>(artifacts);
@@ -65,15 +73,49 @@ namespace Claudable.ViewModels
                     var artifact = JsonConvert.DeserializeObject<ArtifactViewModel>(artifactsJson);
                     if (artifact != null)
                     {
-                        AssociateArtifactWithProjectFile(artifact);
+                        ProcessArtifact(artifact);
                         Artifacts.Insert(0, artifact);
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Log or handle the exception
                 Console.WriteLine($"Error loading artifacts: {ex.Message}");
+            }
+        }
+
+        private void ProcessArtifact(ArtifactViewModel artifact)
+        {
+            artifact.CreatedAt = artifact.CreatedAt.ToLocalTime();
+            AssociateArtifactWithProjectFile(artifact);
+            if (IsSvgArtifact(artifact))
+            {
+                UpdateOrAddSvgArtifact(artifact);
+            }
+        }
+
+        private bool IsSvgArtifact(ArtifactViewModel artifact)
+        {
+            return artifact.FileName.EndsWith(".svg", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void UpdateOrAddSvgArtifact(ArtifactViewModel artifact)
+        {
+            var existingSvgArtifact = SvgArtifacts.FirstOrDefault(s => s.Uuid == artifact.Uuid);
+            if (existingSvgArtifact != null)
+            {
+                existingSvgArtifact.Name = artifact.FileName;
+                existingSvgArtifact.Content = artifact.Content;
+            }
+            else
+            {
+                var svgArtifact = new SvgArtifactViewModel
+                {
+                    Name = artifact.FileName,
+                    Content = artifact.Content,
+                    Uuid = artifact.Uuid
+                };
+                SvgArtifacts.Add(svgArtifact);
             }
         }
 
@@ -120,7 +162,6 @@ namespace Claudable.ViewModels
                 projectFile.ArtifactLastModified = projectFile.AssociatedArtifact.CreatedAt;
             }
         }
-
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {

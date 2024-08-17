@@ -49,7 +49,7 @@
     </Style>
 
     <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource ClaudeBaseStyle}">
-
+        <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
 
     <!-- Button Style -->

@@ -1,15 +1,20 @@
-using System;
-using System.Linq;
 using Claudable.Models;
 
 namespace Claudable.ViewModels
 {
     public class ProjectFolder : FileSystemItem
     {
-        public ProjectFolder(string name, string fullPath)
+        public ProjectFolder(string name, string fullPath, FileSystemItem parent = null)
         {
             Name = name;
             FullPath = fullPath;
+            Parent = parent;
+        }
+
+        public void AddChild(FileSystemItem child)
+        {
+            child.Parent = this;
+            Children.Add(child);
         }
 
         public void ApplyFilter(string[] filters)
