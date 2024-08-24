@@ -323,6 +323,11 @@
 
     <!-- ProjectFolder Template -->
     <HierarchicalDataTemplate DataType="{x:Type vm:ProjectFolder}" ItemsSource="{Binding Children}">
+        <HierarchicalDataTemplate.ItemContainerStyle>
+            <Style TargetType="TreeViewItem">
+                <Setter Property="Visibility" Value="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Style>
+        </HierarchicalDataTemplate.ItemContainerStyle>
         <StackPanel Orientation="Horizontal" MinHeight="20">
             <controls:FileSystemIcon Path="{Binding FullPath}" Width="16" Height="16" Margin="0,0,5,0"/>
             <TextBlock Text="{Binding Name}" Foreground="{StaticResource ClaudeTextBrush}"/>
