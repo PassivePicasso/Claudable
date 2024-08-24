@@ -166,9 +166,9 @@
                             <ContentPresenter x:Name="ContentSite" ContentSource="Header"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"
                                               Margin="10,5"/>
-                            <Ellipse x:Name="Badge" Width="8" Height="8" Fill="{StaticResource ClaudeTextBrush}"
+                            <!--<Ellipse x:Name="Badge" Width="8" Height="8" Fill="{StaticResource ClaudeTextBrush}"
                                      HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-1,2,0,0"
-                                     Visibility="{Binding HasChanges, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                     Visibility="{Binding HasChanges, Converter={StaticResource BooleanToVisibilityConverter}}"/>-->
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
