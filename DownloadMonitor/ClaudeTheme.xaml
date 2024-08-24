@@ -57,7 +57,6 @@
         <Setter Property="Background" Value="{StaticResource ClaudePrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource ClaudeBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="10,5"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
