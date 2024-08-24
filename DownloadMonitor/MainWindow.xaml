@@ -25,23 +25,24 @@
             HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.RowDefinitions>
-                <RowDefinition Height="32"/>
+                <RowDefinition Height="48"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <!-- Custom title bar -->
-            <Grid Grid.Row="0" Background="{StaticResource ClaudePrimaryBrush}" HorizontalAlignment="Stretch">
+            <Grid Grid.Row="0" Margin="6,6,6,0" Background="{StaticResource ClaudePrimaryBrush}" HorizontalAlignment="Stretch" ClipToBounds="False">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="52"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Image Grid.Column="0" Source="/Resources/claudable_icon.png" Width="20" Height="20" Margin="6,0,0,0"/>
-
-                <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin="0,0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
+                <Image Grid.Column="0" Source="/Images/Designer.png" Width="64" Height="64" Margin="-7,-6,0,0" 
+                   VerticalAlignment="Top" HorizontalAlignment="Left"/>
+                
+                <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
 
                 <Button Grid.Column="2" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
                     <Path Data="M0,6 H10" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
@@ -174,34 +175,52 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <Button Width="32" Height="32" Margin="0,-12,0,0"
-                                            HorizontalAlignment="Right" VerticalAlignment="Top" 
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,-16,0,0">
+                                        <Button Content="Set Project Root" 
+                                            Width="120" Height="32"
+                                            Margin="0,0,4,0"
+                                            Command="{Binding SetProjectRootCommand}" />
+
+                                        <ToggleButton IsChecked="{Binding ShowOnlyTrackedArtifacts}"
+                                                      Height="32" Width="120"
+                                                      Margin="0,0,4,0"
+                                                      Content="Showing All"
+                                                      Initialized="ToggleButton_Click"
+                                                      Click="ToggleButton_Click"/>
+
+                                        <Button Width="32" Height="32" Margin="0,0,4,0"
                                             Click="SwapPanels_Click" Content="↔">
-                                        <Button.Template>
-                                            <ControlTemplate>
-                                                <Border CornerRadius="4" Background="{TemplateBinding Background}" 
+                                            <Button.Template>
+                                                <ControlTemplate>
+                                                    <Border CornerRadius="4" Background="{TemplateBinding Background}" 
                                                         BorderBrush="{TemplateBinding BorderBrush}"
                                                         BorderThickness="{TemplateBinding BorderThickness}">
-                                                    <TextBlock Text="↔" FontSize="16" FontWeight="Bold" 
+                                                        <TextBlock Text="↔" FontSize="16" FontWeight="Bold" 
                                                                VerticalAlignment="Center" HorizontalAlignment="Center" 
                                                                Margin="0,0,0,4" IsHitTestVisible="False"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Button.Template>
-                                    </Button>
-                                    <Button Content="Set Project Root" 
-                                            VerticalAlignment="Top"  VerticalContentAlignment="Top" 
-                                            Width="120" Height="24"
-                                            Padding="0,-4,0,0"
-                                            Margin="0,-5,0,0"
-                                            Command="{Binding SetProjectRootCommand}" />
-                                    <TextBlock Grid.Row="0" Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
-                                    <TreeView Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </StackPanel>
+                                    
+                                    
+                                    
+                                    <TextBlock Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
+
+
+                                    <TreeView x:Name="ProjectStructureTreeView" Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
                                                   AllowDrop="True"
                                                   Drop="ProjectFolder_Drop"
                                                   PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
                                                   MouseMove="TreeView_MouseMove"
-                                                  />
+                                                  >
+                                        <TreeView.ItemContainerStyle>
+                                            <Style TargetType="{x:Type TreeViewItem}">
+                                                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            </Style>
+                                        </TreeView.ItemContainerStyle>
+                                    </TreeView>
 
                                 </Grid>
                             </Grid>

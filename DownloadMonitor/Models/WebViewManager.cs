@@ -6,10 +6,14 @@ public class WebViewManager
 {
     private WebView2 _webView;
     private string _lastVisitedUrl;
+    private string _currentProjectUrl;
+    private string _lastDocsResponse;
 
     public string LastVisitedUrl => _lastVisitedUrl;
+    public string CurrentProjectUrl => _currentProjectUrl;
 
     public event EventHandler<string> DocsReceived;
+    public event EventHandler<string> ProjectChanged;
 
     public WebViewManager(WebView2 webView, string initialUrl)
     {
@@ -19,7 +23,7 @@ public class WebViewManager
 
     public async Task InitializeAsync()
     {
-        var userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FileMonitor", "WebView2Data");
+        var userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Claudable", "WebView2Data");
         var webView2Environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
 
         await _webView.EnsureCoreWebView2Async(webView2Environment);
@@ -27,6 +31,11 @@ public class WebViewManager
 
         ConfigureWebViewSettings();
         SetupWebViewEventHandlers();
+    }
+
+    public void Navigate(string url)
+    {
+        _webView.Source = new Uri(url);
     }
 
     private void ConfigureWebViewSettings()
@@ -47,34 +56,53 @@ public class WebViewManager
     {
         _webView.SourceChanged += WebView_SourceChanged;
         _webView.CoreWebView2.WebResourceResponseReceived += ProcessDocsResponse;
-
+        _webView.CoreWebView2.NavigationCompleted += CheckForProjectChange;
+        _webView.CoreWebView2.FrameNavigationCompleted += CheckForProjectChange;
+        _webView.CoreWebView2.HistoryChanged += CoreWebView2_HistoryChanged;
     }
+
+    private void CoreWebView2_HistoryChanged(object? sender, object e) => CheckForProjectChange();
+
     private async void ProcessDocsResponse(object? sender, CoreWebView2WebResourceResponseReceivedEventArgs args)
     {
-        var uri = args.Request.Uri;
-        if (!uri.Contains("claude")) return;
-
+        var url = args.Request.Uri;
+        if (!url.Contains("claude")) return;
+        var uri = new Uri(url);
+        var schemeHostPath = $"https://{uri.Host}{uri.AbsolutePath}";
         switch (uri)
         {
-            case var _ when uri.EndsWith("docs"):
+            case var _ when url.EndsWith("docs"):
                 {
                     var response = args.Response;
                     var stream = await response.GetContentAsync();
                     using var reader = new StreamReader(stream);
-                    var responseBody = reader.ReadToEnd();
-                    DocsReceived?.Invoke(this, responseBody);
+                    _lastDocsResponse = reader.ReadToEnd();
+                    DocsReceived?.Invoke(this, _lastDocsResponse);
                 }
                 break;
         }
     }
 
-
     private void WebView_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
     {
         _lastVisitedUrl = _webView.Source.ToString();
     }
-    public void Navigate(string url)
+
+    private void CheckForProjectChange(object? sender, CoreWebView2NavigationCompletedEventArgs e) => CheckForProjectChange();
+    private void CheckForProjectChange()
     {
-        _webView.Source = new Uri(url);
+        string url = _webView.Source.ToString();
+        if (!url.Contains("claude")) return;
+
+        var uri = new Uri(url);
+        if (uri.Host == "claude.ai" && uri.AbsolutePath.StartsWith("/project/"))
+        {
+            string newProjectUrl = $"https://{uri.Host}{uri.AbsolutePath}";
+            if (newProjectUrl != _currentProjectUrl)
+            {
+                _currentProjectUrl = newProjectUrl;
+                ProjectChanged?.Invoke(this, _currentProjectUrl);
+            }
+        }
     }
 }

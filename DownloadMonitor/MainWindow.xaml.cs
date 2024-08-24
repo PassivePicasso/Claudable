@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -17,7 +18,6 @@ namespace Claudable
         private readonly WindowStateManager _windowStateManager;
         private readonly IDialogService _dialogService;
         private Point _startPoint;
-        private bool _isLeftPanelExpanded = true;
 
         public MainWindow()
         {
@@ -28,6 +28,7 @@ namespace Claudable
             _dialogService = new DialogService();
             _webViewManager = new WebViewManager(ClaudeWebView, "https://claude.ai");
             _webViewManager.DocsReceived += _webViewManager_DocsReceived;
+            _webViewManager.ProjectChanged += _webViewManager_ProjectChanged;
             _windowStateManager = new WindowStateManager(this, _viewModel, _webViewManager);
 
             InitializeAsync();
@@ -35,7 +36,12 @@ namespace Claudable
 
         private void _webViewManager_DocsReceived(object? sender, string e)
         {
+            if (string.IsNullOrEmpty(e)) return;
             _viewModel.ArtifactManager.LoadArtifacts(e);
+        }
+        private void _webViewManager_ProjectChanged(object? sender, string e)
+        {
+            _viewModel.HandleProjectChanged(e);
         }
 
         private async void InitializeAsync()
@@ -43,23 +49,14 @@ namespace Claudable
             await _webViewManager.InitializeAsync();
             _windowStateManager.LoadState();
             _viewModel.LoadStateCommand.Execute(null);
-            ApplyViewModelState();
 
-            // Initialize DownloadManager with WebView2
-            _viewModel.DownloadManager.Initialize(ClaudeWebView.CoreWebView2);
-        }
-
-        private void ApplyViewModelState()
-        {
-            ApplySwapState();
-        }
-
-        private void ApplySwapState()
-        {
             if (_viewModel.IsPanelsSwapped)
             {
                 SwapPanels(false);
             }
+
+            // Initialize DownloadManager with WebView2
+            _viewModel.DownloadManager.Initialize(ClaudeWebView.CoreWebView2);
         }
 
         private void SwapPanels_Click(object sender, RoutedEventArgs e)
@@ -79,7 +76,6 @@ namespace Claudable
 
             _windowStateManager.SaveState();
         }
-
         private void SwapPanelContents()
         {
             var leftContent = LeftPanel.Children[0];
@@ -91,7 +87,6 @@ namespace Claudable
             LeftPanel.Children.Add(rightContent);
             RightPanel.Children.Add(leftContent);
         }
-
         private void SwapColumnWidths()
         {
             var leftColumn = MainGrid.ColumnDefinitions[0];
@@ -103,7 +98,6 @@ namespace Claudable
 
             AdjustColumnWidths(leftColumn, rightColumn);
         }
-
         private void AdjustColumnWidths(ColumnDefinition leftColumn, ColumnDefinition rightColumn)
         {
             double totalWidth = leftColumn.ActualWidth + rightColumn.ActualWidth;
@@ -117,7 +111,6 @@ namespace Claudable
 
             EnsureMinimumWidths(leftColumn, rightColumn);
         }
-
         private void EnsureMinimumWidths(ColumnDefinition leftColumn, ColumnDefinition rightColumn)
         {
             if (leftColumn.ActualWidth < leftColumn.MinWidth)
@@ -131,12 +124,10 @@ namespace Claudable
                 leftColumn.Width = new GridLength(1, GridUnitType.Star);
             }
         }
-
         private void MinimizeButton_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
         }
-
         private void MaximizeRestoreButton_Click(object sender, RoutedEventArgs e)
         {
             if (WindowState == WindowState.Maximized)
@@ -150,7 +141,6 @@ namespace Claudable
                 MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,3 H7 V10 H0 V3 M3,0 H10 V7 H3 V0");
             }
         }
-
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -175,6 +165,7 @@ namespace Claudable
             _viewModel.SaveStateCommand.Execute(null);
         }
 
+        #region Drag and Drop
         private void DownloadItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is ListBoxItem item)
@@ -182,7 +173,6 @@ namespace Claudable
                 DragDrop.DoDragDrop(item, item.DataContext, DragDropEffects.Move);
             }
         }
-
         private void DownloadItem_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -206,7 +196,6 @@ namespace Claudable
                 }
             }
         }
-
         private void SvgArtifact_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is ListBoxItem item)
@@ -214,7 +203,6 @@ namespace Claudable
                 _startPoint = e.GetPosition(null);
             }
         }
-
         private void SvgArtifact_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -241,7 +229,6 @@ namespace Claudable
                 }
             }
         }
-
         private void ProjectFolder_Drop(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent("SvgArtifact"))
@@ -300,7 +287,6 @@ namespace Claudable
         {
             _startPoint = e.GetPosition(null);
         }
-
         private void TreeView_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -340,7 +326,7 @@ namespace Claudable
             while (current != null);
             return null;
         }
-
+        #endregion
 
         private void SortFolderChildren(ProjectFolder folder)
         {
@@ -350,6 +336,14 @@ namespace Claudable
             {
                 folder.Children.Add(child);
             }
+        }
+
+        private void ToggleButton_Click(object sender, EventArgs e)
+        {
+            var toggleButton = sender as ToggleButton;
+            if (toggleButton != null)
+                toggleButton.Content = toggleButton.IsChecked ?? false ? "Showing Tracked" : "Showing All";
+            ProjectStructureTreeView?.Items.Refresh();
         }
     }
 }

@@ -21,6 +21,9 @@ namespace Claudable.ViewModels
         private bool _isPanelsSwapped;
         private int _selectedTabIndex;
         private FileWatcher _fileWatcher;
+        private bool _showOnlyTrackedArtifacts;
+        private ProjectAssociationService _projectAssociationService;
+        private string _currentProjectUrl;
 
         public ArtifactManager ArtifactManager
         {
@@ -42,7 +45,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public FilterViewModel FilterViewModel
         {
             get => _filterViewModel;
@@ -52,7 +54,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public DownloadManager DownloadManager
         {
             get => _downloadManager;
@@ -62,7 +63,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public bool IsPanelsSwapped
         {
             get => _isPanelsSwapped;
@@ -75,7 +75,6 @@ namespace Claudable.ViewModels
                 }
             }
         }
-
         public int SelectedTabIndex
         {
             get => _selectedTabIndex;
@@ -88,9 +87,20 @@ namespace Claudable.ViewModels
                 }
             }
         }
-
+        public bool ShowOnlyTrackedArtifacts
+        {
+            get => _showOnlyTrackedArtifacts;
+            set
+            {
+                if (_showOnlyTrackedArtifacts != value)
+                {
+                    _showOnlyTrackedArtifacts = value;
+                    OnPropertyChanged();
+                    ApplyFilters();
+                }
+            }
+        }
         public ObservableCollection<SvgArtifactViewModel> SvgArtifacts => ArtifactManager.SvgArtifacts;
-
         public ICommand SetProjectRootCommand { get; private set; }
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
@@ -102,6 +112,7 @@ namespace Claudable.ViewModels
             FilterViewModel = new FilterViewModel();
             DownloadManager = new DownloadManager();
             ArtifactManager = new ArtifactManager();
+            _projectAssociationService = new ProjectAssociationService();
 
             SetProjectRootCommand = new RelayCommand(SetProjectRoot);
             SaveStateCommand = new RelayCommand(SaveState);
@@ -110,6 +121,7 @@ namespace Claudable.ViewModels
             FilterViewModel.ApplyFiltersCommand = new RelayCommand(ApplyFilters);
             DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
         }
+
         private void SetProjectRoot()
         {
             var dialog = new OpenFolderDialog
@@ -120,27 +132,66 @@ namespace Claudable.ViewModels
             if (dialog.ShowDialog() == true)
             {
                 string rootPath = dialog.FolderName;
-                RootProjectFolder = new ProjectFolder(Path.GetFileName(rootPath), rootPath);
-                LoadProjectStructure(RootProjectFolder);
+                LoadProjectStructure(rootPath);
+
+                if (!string.IsNullOrEmpty(_currentProjectUrl))
+                {
+                    _projectAssociationService.AddOrUpdateProjectData(_currentProjectUrl, rootPath, ArtifactManager.Artifacts.ToList());
+                }
+            }
+        }
+
+        public void HandleProjectChanged(string projectUrl)
+        {
+            _currentProjectUrl = projectUrl;
+
+            // Clear existing project structure
+            RootProjectFolder = null;
+            OnPropertyChanged(nameof(RootProjectFolder));
+
+            var projectData = _projectAssociationService.GetProjectDataByUrl(projectUrl);
+
+            if (projectData != null)
+            {
+                LoadProjectStructure(projectData.ProjectAssociation.LocalFolderPath);
+                UpdateArtifactStatus();
                 ApplyFilters();
+            }
+            else
+            {
+                SetProjectRoot();
             }
         }
 
         private void InitializeFileWatcher()
         {
             _fileWatcher?.Dispose();
+            if (string.IsNullOrEmpty(RootProjectFolder?.FullPath) || !Directory.Exists(RootProjectFolder.FullPath))
+                return;
+
             _fileWatcher = new FileWatcher(RootProjectFolder);
         }
 
-        private void LoadProjectStructure(ProjectFolder folder)
+        private void LoadProjectStructure(string rootPath)
+        {
+            RootProjectFolder = new ProjectFolder(rootPath, rootPath);
+            LoadProjectStructureRecursive(RootProjectFolder);
+            UpdateArtifactStatus();
+            ApplyFilters();
+            OnPropertyChanged(nameof(RootProjectFolder));
+        }
+
+        private void LoadProjectStructureRecursive(ProjectFolder folder)
         {
             try
             {
+                if (!Directory.Exists(folder.FullPath))
+                    return;
                 foreach (var directory in Directory.GetDirectories(folder.FullPath))
                 {
                     var subFolder = new ProjectFolder(Path.GetFileName(directory), directory, folder);
                     folder.AddChild(subFolder);
-                    LoadProjectStructure(subFolder);
+                    LoadProjectStructureRecursive(subFolder);
                 }
 
                 foreach (var file in Directory.GetFiles(folder.FullPath))
@@ -208,11 +259,12 @@ namespace Claudable.ViewModels
                 }
             }
         }
+
         private void ApplyFilters()
         {
             if (RootProjectFolder != null)
             {
-                RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray());
+                RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray(), ShowOnlyTrackedArtifacts);
                 OnPropertyChanged(nameof(RootProjectFolder));
             }
         }
@@ -222,6 +274,8 @@ namespace Claudable.ViewModels
             if (RootProjectFolder != null && ArtifactManager.Artifacts != null)
             {
                 UpdateArtifactStatusRecursive(RootProjectFolder);
+                if (!string.IsNullOrEmpty(_currentProjectUrl))
+                    _projectAssociationService.UpdateArtifacts(_currentProjectUrl, ArtifactManager.Artifacts.ToList());
             }
         }
 
@@ -255,11 +309,18 @@ namespace Claudable.ViewModels
                 IsPanelsSwapped = IsPanelsSwapped,
                 SelectedTabIndex = SelectedTabIndex,
                 Filters = FilterViewModel.Filters.ToArray(),
-                ProjectRootPath = RootProjectFolder?.FullPath
+                ProjectRootPath = RootProjectFolder?.FullPath,
+                ShowOnlyTrackedArtifacts = ShowOnlyTrackedArtifacts
             };
 
             string json = JsonConvert.SerializeObject(state);
             File.WriteAllText("appstate.json", json);
+
+            // Save current project data
+            if (!string.IsNullOrEmpty(_currentProjectUrl) && RootProjectFolder != null)
+            {
+                _projectAssociationService.AddOrUpdateProjectData(_currentProjectUrl, RootProjectFolder.FullPath, ArtifactManager.Artifacts.ToList());
+            }
         }
 
         private void LoadState()
@@ -272,11 +333,11 @@ namespace Claudable.ViewModels
                 IsPanelsSwapped = state.IsPanelsSwapped;
                 SelectedTabIndex = state.SelectedTabIndex;
                 FilterViewModel.Filters = new ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
+                ShowOnlyTrackedArtifacts = state.ShowOnlyTrackedArtifacts;
 
                 if (!string.IsNullOrEmpty(state.ProjectRootPath))
                 {
-                    RootProjectFolder = new ProjectFolder(Path.GetFileName(state.ProjectRootPath), state.ProjectRootPath);
-                    LoadProjectStructure(RootProjectFolder);
+                    LoadProjectStructure(state.ProjectRootPath);
                 }
                 ApplyFilters();
                 UpdateArtifactStatus();

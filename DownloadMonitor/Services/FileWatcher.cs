@@ -61,8 +61,9 @@ namespace Claudable.Services
 
         private ProjectFile FindProjectFile(ProjectFolder folder, string fullPath)
         {
-            foreach (var item in folder.Children)
+            for (int i = 0; i < folder.Children.Count; i++)
             {
+                Models.FileSystemItem? item = folder.Children[i];
                 if (item is ProjectFile file && file.FullPath == fullPath)
                 {
                     return file;
