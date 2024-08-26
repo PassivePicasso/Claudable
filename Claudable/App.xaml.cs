@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace DownloadMonitor
+namespace Claudable
 {
     /// <summary>
     /// Interaction logic for App.xaml

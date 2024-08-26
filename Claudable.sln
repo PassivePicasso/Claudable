@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DownloadMonitor", "DownloadMonitor\DownloadMonitor.csproj", "{4E38DD41-07A8-42F6-A614-8990DC888970}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Claudable", "Claudable\Claudable.csproj", "{4E38DD41-07A8-42F6-A614-8990DC888970}"
 EndProject
 Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
@@ -21,4 +21,6 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
+EndGlobal
+
 EndGlobal
