@@ -24,6 +24,7 @@ namespace Claudable.ViewModels
         private bool _showOnlyTrackedArtifacts;
         private ProjectAssociationService _projectAssociationService;
         private string _currentProjectUrl;
+        private FilterMode _currentFilterMode;
 
         public ArtifactManager ArtifactManager
         {
@@ -87,14 +88,14 @@ namespace Claudable.ViewModels
                 }
             }
         }
-        public bool ShowOnlyTrackedArtifacts
+        public FilterMode CurrentFilterMode
         {
-            get => _showOnlyTrackedArtifacts;
+            get => _currentFilterMode;
             set
             {
-                if (_showOnlyTrackedArtifacts != value)
+                if (_currentFilterMode != value)
                 {
-                    _showOnlyTrackedArtifacts = value;
+                    _currentFilterMode = value;
                     OnPropertyChanged();
                     ApplyFilters();
                 }
@@ -106,6 +107,7 @@ namespace Claudable.ViewModels
         public ICommand LoadStateCommand { get; private set; }
         public ICommand UpdateArtifactStatusCommand { get; private set; }
         public ICommand DropSvgArtifactCommand { get; private set; }
+        public ICommand ExecuteFindInBrowserCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -264,7 +266,7 @@ namespace Claudable.ViewModels
         {
             if (RootProjectFolder != null)
             {
-                RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray(), ShowOnlyTrackedArtifacts);
+                RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray(), CurrentFilterMode);
                 OnPropertyChanged(nameof(RootProjectFolder));
             }
         }
@@ -310,7 +312,7 @@ namespace Claudable.ViewModels
                 SelectedTabIndex = SelectedTabIndex,
                 Filters = FilterViewModel.Filters.ToArray(),
                 ProjectRootPath = RootProjectFolder?.FullPath,
-                ShowOnlyTrackedArtifacts = ShowOnlyTrackedArtifacts
+                CurrentFilterMode = CurrentFilterMode
             };
 
             string json = JsonConvert.SerializeObject(state);
@@ -333,7 +335,7 @@ namespace Claudable.ViewModels
                 IsPanelsSwapped = state.IsPanelsSwapped;
                 SelectedTabIndex = state.SelectedTabIndex;
                 FilterViewModel.Filters = new ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
-                ShowOnlyTrackedArtifacts = state.ShowOnlyTrackedArtifacts;
+                CurrentFilterMode = state.CurrentFilterMode;
 
                 if (!string.IsNullOrEmpty(state.ProjectRootPath))
                 {

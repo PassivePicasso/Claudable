@@ -337,12 +337,10 @@ namespace Claudable
                 folder.Children.Add(child);
             }
         }
-
-        private void ToggleButton_Click(object sender, EventArgs e)
+        private void FilterModeButton_Click(object sender, RoutedEventArgs e)
         {
-            var toggleButton = sender as ToggleButton;
-            if (toggleButton != null)
-                toggleButton.Content = toggleButton.IsChecked ?? false ? "Showing Tracked" : "Showing All";
+            _viewModel.CurrentFilterMode = (FilterMode)(((int)_viewModel.CurrentFilterMode + 1) % 3);
+            ((Button)sender).Content = _viewModel.CurrentFilterMode.ToString();
             ProjectStructureTreeView?.Items.Refresh();
         }
     }

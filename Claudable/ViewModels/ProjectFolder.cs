@@ -28,8 +28,7 @@ namespace Claudable.ViewModels
             child.Parent = this;
             Children.Add(child);
         }
-
-        public void ApplyFilter(string[] filters, bool showOnlyTrackedArtifacts)
+        public void ApplyFilter(string[] filters, FilterMode filterMode)
         {
             bool shouldExclude = filters.Any(filter => Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
 
@@ -47,12 +46,12 @@ namespace Claudable.ViewModels
                 {
                     if (child is ProjectFolder folder)
                     {
-                        folder.ApplyFilter(filters, showOnlyTrackedArtifacts);
+                        folder.ApplyFilter(filters, filterMode);
                     }
                     else if (child is ProjectFile file)
                     {
                         bool isFiltered = filters.Any(filter => file.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
-                        file.IsVisible = !isFiltered && (!showOnlyTrackedArtifacts || file.IsTrackedAsArtifact);
+                        file.IsVisible = !isFiltered && ShouldShowFile(file, filterMode);
                     }
                 }
 
@@ -63,6 +62,19 @@ namespace Claudable.ViewModels
             IsExpanded = Children.Any(c => c.IsVisible);
             OnPropertyChanged(nameof(IsExpanded));
             OnPropertyChanged(nameof(Children));
+        }
+
+        private bool ShouldShowFile(ProjectFile file, FilterMode filterMode)
+        {
+            switch (filterMode)
+            {
+                case FilterMode.ShowOnlyTrackedArtifacts:
+                    return file.IsTrackedAsArtifact;
+                case FilterMode.ShowOnlyOutdatedFiles:
+                    return file.IsTrackedAsArtifact && file.IsLocalNewer;
+                default:
+                    return true;
+            }
         }
     }
 }
