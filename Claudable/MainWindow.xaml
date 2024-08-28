@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Claudable"
         xmlns:vm="clr-namespace:Claudable.ViewModels"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
@@ -41,7 +40,7 @@
 
                 <Image Grid.Column="0" Source="/Images/Designer.png" Width="64" Height="64" Margin="-7,-6,0,0" 
                    VerticalAlignment="Top" HorizontalAlignment="Left"/>
-                
+
                 <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
 
                 <Button Grid.Column="2" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
@@ -186,7 +185,7 @@
                                                 Margin="0,0,4,0"
                                                 Content="{Binding CurrentFilterMode}"
                                                 Click="FilterModeButton_Click"/>
-                                        
+
                                         <Button Width="32" Height="32" Margin="0,0,4,0"
                                             Click="SwapPanels_Click" Content="↔">
                                             <Button.Template>
@@ -202,9 +201,9 @@
                                             </Button.Template>
                                         </Button>
                                     </StackPanel>
-                                    
-                                    
-                                    
+
+
+
                                     <TextBlock Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
 
 
@@ -216,7 +215,15 @@
                                                   >
                                         <TreeView.ItemContainerStyle>
                                             <Style TargetType="{x:Type TreeViewItem}">
-                                                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <Setter Property="Visibility" Value="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                                <Setter Property="FontWeight" Value="Normal" />
+                                                <Setter Property="AllowDrop" Value="True" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </Trigger>
+                                                </Style.Triggers>
                                             </Style>
                                         </TreeView.ItemContainerStyle>
                                     </TreeView>

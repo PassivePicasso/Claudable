@@ -324,7 +324,7 @@
     <HierarchicalDataTemplate DataType="{x:Type vm:ProjectFolder}" ItemsSource="{Binding Children}">
         <HierarchicalDataTemplate.ItemContainerStyle>
             <Style TargetType="TreeViewItem">
-                <Setter Property="Visibility" Value="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
             </Style>
         </HierarchicalDataTemplate.ItemContainerStyle>
         <StackPanel Orientation="Horizontal" MinHeight="20">

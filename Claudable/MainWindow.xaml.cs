@@ -1,11 +1,12 @@
 ﻿using Claudable.Models;
 using Claudable.Services;
+using Claudable.Utilities;
 using Claudable.ViewModels;
+using Claudable.Windows;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -18,6 +19,7 @@ namespace Claudable
         private readonly WindowStateManager _windowStateManager;
         private readonly IDialogService _dialogService;
         private Point _startPoint;
+        private DragAdorner dragAdorner = new DragAdorner();
 
         public MainWindow()
         {
@@ -31,7 +33,20 @@ namespace Claudable
             _webViewManager.ProjectChanged += _webViewManager_ProjectChanged;
             _windowStateManager = new WindowStateManager(this, _viewModel, _webViewManager);
 
+            MouseHook.MouseMoved += OnMouseMoved;
+            MouseHook.SetHook();
+            this.Closed += (s, e) =>
+            {
+                MouseHook.Unhook();
+                dragAdorner.Close();
+            };
+
             InitializeAsync();
+        }
+
+        private void OnMouseMoved(Point cursorPosition)
+        {
+            dragAdorner.UpdatePosition(cursorPosition);
         }
 
         private void _webViewManager_DocsReceived(object? sender, string e)
@@ -170,7 +185,7 @@ namespace Claudable
         {
             if (sender is ListBoxItem item)
             {
-                DragDrop.DoDragDrop(item, item.DataContext, DragDropEffects.Move);
+                _startPoint = e.GetPosition(null);
             }
         }
         private void DownloadItem_MouseMove(object sender, MouseEventArgs e)
@@ -190,8 +205,83 @@ namespace Claudable
                     {
                         DownloadItem downloadItem = (DownloadItem)listBox.ItemContainerGenerator.ItemFromContainer(listBoxItem);
 
+                        // Create custom adorner for drag and drop visual
+                        dragAdorner.DataContext = downloadItem;
+                        dragAdorner.Show();
+
                         DataObject dragData = new DataObject("DownloadItem", downloadItem);
                         DragDrop.DoDragDrop(listBoxItem, dragData, DragDropEffects.Move);
+
+                        dragAdorner.Hide();
+                    }
+                }
+            }
+        }
+
+        private void ProjectFolder_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("SvgArtifact"))
+            {
+                SvgArtifactViewModel svgArtifact = e.Data.GetData("SvgArtifact") as SvgArtifactViewModel;
+                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+
+                if (treeViewItem != null && svgArtifact != null)
+                {
+                    FileSystemItem targetItem = treeViewItem.DataContext as FileSystemItem;
+
+                    if (targetItem != null)
+                    {
+                        string fileType = Keyboard.Modifiers == ModifierKeys.Control ? "ico" : "png";
+                        var dropInfo = new Tuple<SvgArtifactViewModel, FileSystemItem, string>(svgArtifact, targetItem, fileType);
+                        _viewModel.DropSvgArtifactCommand.Execute(dropInfo);
+                    }
+                }
+            }
+            else if (e.Data.GetDataPresent("DownloadItem"))
+            {
+                DownloadItem downloadItem = e.Data.GetData("DownloadItem") as DownloadItem;
+                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+
+                FileSystemItem targetItem = null;
+                if (treeViewItem != null)
+                {
+                    targetItem = treeViewItem.DataContext as FileSystemItem;
+                }
+
+                if (targetItem == null)
+                {
+                    targetItem = _viewModel.RootProjectFolder;
+                }
+
+                ProjectFolder targetFolder = targetItem as ProjectFolder;
+                if (targetItem is ProjectFile)
+                {
+                    targetFolder = targetItem.Parent as ProjectFolder;
+                }
+
+                if (targetFolder != null && downloadItem != null)
+                {
+                    string sourceFilePath = downloadItem.Path;
+                    string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
+
+                    try
+                    {
+                        File.Move(sourceFilePath, destinationFilePath);
+                        _viewModel.DownloadManager.Downloads.Remove(downloadItem);
+
+                        // Add the new file to the target folder's children
+                        ProjectFile newFile = new ProjectFile(Path.GetFileName(destinationFilePath), destinationFilePath);
+                        targetFolder.AddChild(newFile);
+
+                        // Optionally, you can sort the children after adding the new file
+                        SortFolderChildren(targetFolder);
+
+                        // Refresh the TreeView
+                        ProjectStructureTreeView.Items.Refresh();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error moving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -224,60 +314,6 @@ namespace Claudable
                         {
                             DataObject dragData = new DataObject("SvgArtifact", svgArtifact);
                             DragDrop.DoDragDrop(listBoxItem, dragData, DragDropEffects.Copy);
-                        }
-                    }
-                }
-            }
-        }
-        private void ProjectFolder_Drop(object sender, DragEventArgs e)
-        {
-            if (e.Data.GetDataPresent("SvgArtifact"))
-            {
-                SvgArtifactViewModel svgArtifact = e.Data.GetData("SvgArtifact") as SvgArtifactViewModel;
-                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
-
-                if (treeViewItem != null && svgArtifact != null)
-                {
-                    FileSystemItem targetItem = treeViewItem.DataContext as FileSystemItem;
-
-                    if (targetItem != null)
-                    {
-                        string fileType = Keyboard.Modifiers == ModifierKeys.Control ? "ico" : "png";
-                        var dropInfo = new Tuple<SvgArtifactViewModel, FileSystemItem, string>(svgArtifact, targetItem, fileType);
-                        _viewModel.DropSvgArtifactCommand.Execute(dropInfo);
-                    }
-                }
-            }
-            else if (e.Data.GetDataPresent(typeof(DownloadItem)))
-            {
-                DownloadItem downloadItem = e.Data.GetData(typeof(DownloadItem)) as DownloadItem;
-                TreeViewItem treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
-
-                if (treeViewItem != null)
-                {
-                    FileSystemItem targetItem = treeViewItem.DataContext as FileSystemItem;
-
-                    if (targetItem != null && targetItem.IsFolder && downloadItem != null)
-                    {
-                        ProjectFolder targetFolder = targetItem as ProjectFolder;
-                        string sourceFilePath = downloadItem.Path;
-                        string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
-
-                        try
-                        {
-                            File.Move(sourceFilePath, destinationFilePath);
-                            _viewModel.DownloadManager.Downloads.Remove(downloadItem);
-
-                            // Add the new file to the target folder's children
-                            ProjectFile newFile = new ProjectFile(Path.GetFileName(destinationFilePath), destinationFilePath);
-                            targetFolder.Children.Add(newFile);
-
-                            // Optionally, you can sort the children after adding the new file
-                            SortFolderChildren(targetFolder);
-                        }
-                        catch (Exception ex)
-                        {
-                            _dialogService.ShowError($"Error moving file: {ex.Message}");
                         }
                     }
                 }

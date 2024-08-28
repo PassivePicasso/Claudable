@@ -124,6 +124,47 @@ namespace Claudable.ViewModels
             DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
         }
 
+        public void MoveDownloadedFile(DownloadItem downloadItem, ProjectFolder targetFolder)
+        {
+            string sourceFilePath = downloadItem.Path;
+            string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
+
+            try
+            {
+                File.Move(sourceFilePath, destinationFilePath);
+                DownloadManager.Downloads.Remove(downloadItem);
+
+                // Add the new file to the target folder's children
+                ProjectFile newFile = new ProjectFile(Path.GetFileName(destinationFilePath), destinationFilePath);
+                targetFolder.AddChild(newFile);
+
+                // Sort the children after adding the new file
+                SortFolderChildren(targetFolder);
+
+                // Update artifact status for the new file
+                UpdateArtifactStatus();
+
+                // Apply filters to ensure the new file is displayed correctly
+                ApplyFilters();
+
+                OnPropertyChanged(nameof(RootProjectFolder));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error moving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SortFolderChildren(ProjectFolder folder)
+        {
+            var sortedChildren = folder.Children.OrderBy(c => !c.IsFolder).ThenBy(c => c.Name).ToList();
+            folder.Children.Clear();
+            foreach (var child in sortedChildren)
+            {
+                folder.Children.Add(child);
+            }
+        }
+
         private void SetProjectRoot()
         {
             var dialog = new OpenFolderDialog

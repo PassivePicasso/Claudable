@@ -1,0 +1,28 @@
+﻿<Window x:Class="Claudable.Windows.DragAdorner"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Claudable.Windows" xmlns:controls="clr-namespace:Claudable.Controls"
+        xmlns:m="clr-namespace:Claudable.Models"
+        mc:Ignorable="d"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Title="DragAdorner" 
+        SizeToContent="WidthAndHeight"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        IsHitTestVisible="False"
+        >
+    <Grid Margin="0,32,0,0" >
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Grid.ColumnSpan="2" CornerRadius="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#22000088"/>
+        <controls:FileSystemIcon Grid.Column="0" Path="{Binding Path}" Width="16" Height="16" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6,2,4,2"/>
+
+        <TextBlock Grid.Column="1" Text="{Binding Path}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="6,0,6,0"/>
+    </Grid>
+</Window>
