@@ -73,11 +73,15 @@ public class WebViewManager
         {
             case var _ when url.EndsWith("docs"):
                 {
-                    var response = args.Response;
-                    var stream = await response.GetContentAsync();
-                    using var reader = new StreamReader(stream);
-                    _lastDocsResponse = reader.ReadToEnd();
-                    DocsReceived?.Invoke(this, _lastDocsResponse);
+                    try
+                    {
+                        var response = args.Response;
+                        var stream = await response.GetContentAsync();
+                        using var reader = new StreamReader(stream);
+                        _lastDocsResponse = reader.ReadToEnd();
+                        DocsReceived?.Invoke(this, _lastDocsResponse);
+                    }
+                    catch (Exception) { }
                 }
                 break;
         }
