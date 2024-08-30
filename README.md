@@ -1,49 +1,64 @@
 # Claudable
 
-Claudable is a desktop application that enhances the Claude AI experience by providing local file management and integration capabilities.
+Claudable is a sophisticated desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
 
-**Note:** This is a side project. If someone wants to pick this up and take the wheel, feel free; otherwise, I'll only be updating it as I run into issues I want to streamline.
+## Key Features
 
-Interestingly, the code for this project was primarily written by Claude itself, and the Claudable project was developed using Claudable as soon as the interface allowed for it - a case of the tool being used to improve itself!
+1. **Web Integration**
+   - Embeds Claude AI's web interface directly into the application
+   - Seamless interaction with Claude AI without leaving the app
 
-## Features
+2. **Project Structure Viewer**
+   - Displays and manages local project files and directories
+   - Supports drag-and-drop functionality for easy file management
+   - Filter settings to customize the view of project files
 
-- **Web Integration**: Embeds Claude AI's web interface directly into the application.
-- **Project Structure Viewer**: Displays and manages local project files and directories.
-- **Artifact Management**: Tracks and manages artifacts created by Claude AI.
-- **SVG Handling**: Converts SVG artifacts to PNG or ICO formats.
-- **Download Management**: Manages file downloads from the Claude AI interface.
-- **Customizable Layout**: Allows swapping panels for a personalized user experience.
-- **File Filtering**: Provides options to filter and view specific file types or statuses.
+3. **Artifact Management**
+   - Tracks and manages artifacts created by Claude AI
+   - Supports SVG artifacts with preview and export options
+   - Enables associating local files with Claude AI artifacts
 
-## Key Functionalities
+4. **Download Management**
+   - Manages file downloads from the Claude AI interface
+   - Allows drag-and-drop of downloaded files into the project structure
 
-### Drag and Drop
+5. **Customizable Layout**
+   - Swap panels for a personalized user experience
+   - Adjustable split view between Claude AI interface and project structure
 
-- **Project Structure to Claude AI**: Drag files from the Project Structure view and drop them into the Claude AI interface to add them to Project Knowledge or Chat files.
-- **SVG Artifacts to Project Structure**: Drag SVG artifacts from the SVG Artifacts tab and drop them into folders in the Project Structure view.
-  - Default: Saves as PNG
-  - Hold Ctrl while dropping: Saves as ICO
+6. **File Filtering and View Modes**
+   - Filter settings to exclude specific files or folders from view
+   - Multiple view modes: Show All, Show Only Tracked Artifacts, Show Only Outdated Files
 
-### Filter Settings
+7. **SVG Handling**
+   - Converts SVG artifacts to PNG or ICO formats
+   - Drag-and-drop SVG artifacts into the project structure
 
-The Filter Settings tab allows you to define filters that control which files and folders are displayed in the Project Structure view. You can add multiple filters, and the system will hide any files or folders that match these filters.
+8. **Project Association**
+   - Associates local folders with Claude AI projects
+   - Automatically loads associated project structure when switching projects in Claude AI
 
-### Project Structure View Modes
+9. **File Synchronization**
+   - Tracks differences between local files and Claude AI artifacts
+   - Visual indicators for files that are newer locally or in Claude AI
 
-The Project Structure view has three modes:
+10. **Custom Theming**
+    - Implements a custom Claude-inspired theme for a cohesive look and feel
 
-1. **Show All**: Displays all files and folders.
-2. **Show Only Tracked Artifacts**: Only shows files that are tracked as artifacts by Claude AI.
-3. **Show Only Outdated Files**: Displays only tracked artifacts where the local file is newer than the version Claude AI knows about.
+11. **Window State Management**
+    - Saves and restores window state, including size, position, and panel configuration
 
-## Technologies Used
+12. **File System Monitoring**
+    - Real-time updates to the project structure when files change on disk
 
-- C# / .NET
-- WPF (Windows Presentation Foundation)
-- WebView2 for web integration
-- JSON for data serialization
-- SVG.Skia for SVG processing
+## Technical Details
+
+- Built with C# and WPF (Windows Presentation Foundation)
+- Uses WebView2 for web integration
+- Implements MVVM (Model-View-ViewModel) architecture
+- Utilizes various WPF controls and custom styles
+- Implements custom drag-and-drop functionality
+- Uses SkiaSharp for SVG processing
 
 ## Getting Started
 
@@ -52,15 +67,65 @@ The Project Structure view has three modes:
 3. Restore NuGet packages
 4. Build and run the application
 
-## Project Structure
+## Usage
 
-- `MainWindow.xaml` / `MainWindow.xaml.cs`: Main application window and logic
-- `MainViewModel.cs`: Primary view model handling application state and logic
-- `WebViewManager.cs`: Manages WebView2 control and interactions with Claude AI
-- `ArtifactManager.cs`: Handles artifact-related operations
-- `ProjectFolder.cs` / `ProjectFile.cs`: Represent the local file system structure
-- `FileWatcher.cs`: Monitors local file system changes
-- `SVGRasterizer.cs`: Converts SVG to PNG/ICO formats
+1. **Launch Claudable**
+   - Upon startup, the application opens with Claude AI's web interface on one side and the project structure viewer on the other.
+
+2. **Set Up a New Project**
+   - Click the "Set Project Root" button in the top right corner.
+   - Select the local folder that corresponds to your project.
+   - The project structure will appear in the tree view on the right side.
+
+3. **Interact with Claude AI**
+   - Use the Claude AI interface on the left side as you normally would in a web browser.
+   - As you work with Claude, the application will track artifacts and associate them with your local files.
+
+4. **Manage Local Files and Artifacts**
+   - The project structure viewer on the right shows your local files and their relationship to Claude AI artifacts.
+   - Files tracked as artifacts are marked with an "A" icon.
+   - Files that are newer locally than in Claude AI are marked with an up arrow (↑).
+   - Files that are newer in Claude AI than locally are marked with a down arrow (↓).
+
+5. **Use Filter Modes**
+   - Click the filter mode button (next to "Set Project Root") to cycle through view modes:
+     - "Show All": Displays all files and folders.
+     - "Show Only Tracked Artifacts": Only shows files associated with Claude AI artifacts.
+     - "Show Only Outdated Files": Displays files where the local version differs from the Claude AI version.
+
+6. **Set Up Custom Filters**
+   - Go to the "Filter Settings" tab at the bottom right.
+   - Enter file or folder names you want to exclude from the project view.
+   - Click "Add Filter" to apply the filter.
+   - Filters are applied across all filter modes.
+
+7. **Manage Downloads**
+   - When you download files from Claude AI, they appear in the "Downloads" tab at the bottom right.
+   - Drag and drop downloaded files from this tab into your project structure to move them to your desired location.
+
+8. **Work with SVG Artifacts**
+   - SVG files created by Claude AI appear in the "SVG Artifacts" tab at the bottom right.
+   - Drag an SVG artifact into your project structure to save it:
+     - By default, it saves as a PNG file.
+     - Hold Ctrl while dragging to save as an ICO file.
+
+9. **Drag and Drop to Claude AI**
+   - Drag files from your project structure and drop them into the Claude AI interface to add them to your conversation or project knowledge.
+
+10. **Automatic Project Association**
+    - When you switch to a different project in Claude AI, Claudable automatically loads the associated local folder if you've set one up before.
+    - If no association exists, you'll be prompted to set a local folder for the new project.
+
+11. **Customize Layout**
+    - Click the swap button (↔) in the top right corner to switch the positions of the Claude AI interface and the project structure viewer.
+
+12. **Real-time File System Monitoring**
+    - Any changes made to your project files outside of Claudable (e.g., in File Explorer or another application) are automatically reflected in the project structure viewer.
+
+13. **Automatic Renaming**
+    - If Claude AI renames an artifact, Claudable will automatically update the association with your local file, maintaining the correct relationship between your local files and Claude AI artifacts.
+
+Remember that Claudable saves its state, including your project associations and filter settings, between sessions. This means you can pick up right where you left off when you relaunch the application.
 
 ## Configuration
 
@@ -79,4 +144,3 @@ This project is licensed under the MIT License.
 - Claude AI by Anthropic
 - Microsoft for WebView2
 - SkiaSharp and SVG.Skia libraries
-
