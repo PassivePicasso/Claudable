@@ -104,7 +104,6 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
 
                                             <TextBlock Grid.Row="0" Text="Filter Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
@@ -130,10 +129,6 @@
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
-
-                                            <Button Grid.Row="3" Content="Apply Filters" 
-                                Command="{Binding FilterViewModel.ApplyFiltersCommand}" 
-                                HorizontalAlignment="Left"/>
                                         </Grid>
                                     </TabItem>
 
@@ -207,7 +202,7 @@
                                     <TextBlock Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
 
 
-                                    <TreeView x:Name="ProjectStructureTreeView" Grid.Row="1" ItemsSource="{Binding RootProjectFolder.Children}"
+                                    <TreeView x:Name="ProjectStructureTreeView" Grid.Row="1" ItemsSource="{Binding RootProjectFolder.FilteredChildren}"
                                                   AllowDrop="True"
                                                   Drop="ProjectFolder_Drop"
                                                   PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
@@ -215,6 +210,7 @@
                                                   >
                                         <TreeView.ItemContainerStyle>
                                             <Style TargetType="{x:Type TreeViewItem}">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                                                 <Setter Property="Visibility" Value="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                                                 <Setter Property="FontWeight" Value="Normal" />

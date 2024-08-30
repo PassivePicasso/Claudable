@@ -1,10 +1,12 @@
 using Claudable.Models;
+using System.Collections.ObjectModel;
 
 namespace Claudable.ViewModels
 {
     public class ProjectFolder : FileSystemItem
     {
         private bool _isExpanded;
+        private ObservableCollection<FileSystemItem> _filteredChildren = [];
 
         public bool IsExpanded
         {
@@ -16,7 +18,17 @@ namespace Claudable.ViewModels
             }
         }
 
-        public ProjectFolder(string name, string fullPath, FileSystemItem parent = null)
+        public ObservableCollection<FileSystemItem> FilteredChildren
+        {
+            get => _filteredChildren;
+            private set
+            {
+                _filteredChildren = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ProjectFolder(string name, string fullPath, FileSystemItem? parent = null)
         {
             Name = name;
             FullPath = fullPath;
@@ -28,53 +40,35 @@ namespace Claudable.ViewModels
             child.Parent = this;
             Children.Add(child);
         }
-        public void ApplyFilter(string[] filters, FilterMode filterMode)
+
+        public void ApplyFilter(FilterMode filterMode)
         {
-            bool shouldExclude = filters.Any(filter => Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
+            FilteredChildren.Clear();
 
-            if (shouldExclude)
-            {
-                IsVisible = false;
-                foreach (var child in Children)
+            foreach (var child in Children)
+                switch (child)
                 {
-                    child.IsVisible = false;
+                    case ProjectFile file:
+                        var shouldAdd = filterMode switch
+                        {
+                            FilterMode.ShowOnlyTrackedArtifacts => file.IsTrackedAsArtifact,
+                            FilterMode.ShowOnlyOutdatedFiles => file.IsTrackedAsArtifact && file.IsLocalNewer,
+                            _ => true,
+                        };
+                        if (shouldAdd)
+                        {
+                            FilteredChildren.Add(child);
+                        }
+                        break;
+                    case ProjectFolder folder:
+                        folder.ApplyFilter(filterMode);
+                        if (folder.FilteredChildren.Count > 0)
+                            FilteredChildren.Add(child);
+                        break;
+
                 }
-            }
-            else
-            {
-                foreach (var child in Children)
-                {
-                    if (child is ProjectFolder folder)
-                    {
-                        folder.ApplyFilter(filters, filterMode);
-                    }
-                    else if (child is ProjectFile file)
-                    {
-                        bool isFiltered = filters.Any(filter => file.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
-                        file.IsVisible = !isFiltered && ShouldShowFile(file, filterMode);
-                    }
-                }
 
-                IsVisible = Children.Any(c => c.IsVisible);
-            }
-
-            // Expand the folder if it has visible children
-            IsExpanded = Children.Any(c => c.IsVisible);
-            OnPropertyChanged(nameof(IsExpanded));
-            OnPropertyChanged(nameof(Children));
-        }
-
-        private bool ShouldShowFile(ProjectFile file, FilterMode filterMode)
-        {
-            switch (filterMode)
-            {
-                case FilterMode.ShowOnlyTrackedArtifacts:
-                    return file.IsTrackedAsArtifact;
-                case FilterMode.ShowOnlyOutdatedFiles:
-                    return file.IsTrackedAsArtifact && file.IsLocalNewer;
-                default:
-                    return true;
-            }
+            IsVisible = FilteredChildren.Count > 0;
         }
     }
 }

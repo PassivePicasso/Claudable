@@ -19,7 +19,8 @@ namespace Claudable.ViewModels
             {
                 _associatedArtifact = value;
                 OnPropertyChanged();
-                UpdateArtifactStatus();
+                OnPropertyChanged(nameof(IsTrackedAsArtifact));
+                OnPropertyChanged(nameof(IsLocalNewer));
             }
         }
 
@@ -30,7 +31,7 @@ namespace Claudable.ViewModels
             {
                 _localLastModified = value;
                 OnPropertyChanged();
-                UpdateVersionComparison();
+                OnPropertyChanged(nameof(IsLocalNewer));
             }
         }
 
@@ -41,29 +42,13 @@ namespace Claudable.ViewModels
             {
                 _artifactLastModified = value;
                 OnPropertyChanged();
-                UpdateVersionComparison();
+                OnPropertyChanged(nameof(IsLocalNewer));
             }
         }
 
-        public bool IsLocalNewer
-        {
-            get => _isLocalNewer;
-            private set
-            {
-                _isLocalNewer = value;
-                OnPropertyChanged();
-            }
-        }
+        public bool IsLocalNewer => LocalLastModified > ArtifactLastModified;
 
-        public bool IsTrackedAsArtifact
-        {
-            get => _isTrackedAsArtifact;
-            private set
-            {
-                _isTrackedAsArtifact = value;
-                OnPropertyChanged();
-            }
-        }
+        public bool IsTrackedAsArtifact => AssociatedArtifact != null;
 
         public ProjectFile(string name, string fullPath, FileSystemItem parent = null) : base()
         {
@@ -73,22 +58,11 @@ namespace Claudable.ViewModels
             LocalLastModified = System.IO.File.GetLastWriteTime(fullPath);
         }
 
-        private void UpdateVersionComparison()
-        {
-            IsLocalNewer = LocalLastModified > ArtifactLastModified;
-        }
-
-        private void UpdateArtifactStatus()
-        {
-            IsTrackedAsArtifact = AssociatedArtifact != null;
-        }
-
         public void UpdateFromArtifact(ArtifactViewModel artifact)
         {
             AssociatedArtifact = artifact;
             ArtifactLastModified = artifact.CreatedAt;
-            UpdateArtifactStatus();
-            UpdateVersionComparison();
+            OnPropertyChanged(nameof(IsTrackedAsArtifact));
         }
 
         public new event PropertyChangedEventHandler PropertyChanged;

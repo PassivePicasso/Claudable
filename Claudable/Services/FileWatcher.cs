@@ -8,10 +8,12 @@ namespace Claudable.Services
     {
         private FileSystemWatcher _watcher;
         private ProjectFolder _rootFolder;
+        private Action _updateProjectStructure;
 
-        public FileWatcher(ProjectFolder rootFolder)
+        public FileWatcher(ProjectFolder rootFolder, Action updateProjectStructure)
         {
             _rootFolder = rootFolder;
+            _updateProjectStructure = updateProjectStructure;
             InitializeWatcher();
         }
 
@@ -24,30 +26,20 @@ namespace Claudable.Services
                 EnableRaisingEvents = true
             };
 
+            _watcher.Created += OnFileSystemChanged;
+            _watcher.Deleted += OnFileSystemChanged;
+            _watcher.Renamed += OnFileSystemChanged;
             _watcher.Changed += OnFileChanged;
-            _watcher.Created += OnFileCreated;
-            _watcher.Renamed += OnFileRenamed;
-            _watcher.Deleted += OnFileDeleted;
+        }
+
+        private void OnFileSystemChanged(object sender, FileSystemEventArgs e)
+        {
+            _updateProjectStructure();
         }
 
         private void OnFileChanged(object sender, FileSystemEventArgs e)
         {
             UpdateProjectFile(e.FullPath);
-        }
-
-        private void OnFileCreated(object sender, FileSystemEventArgs e)
-        {
-            // Handle file creation if needed
-        }
-
-        private void OnFileRenamed(object sender, RenamedEventArgs e)
-        {
-            // Handle file renaming if needed
-        }
-
-        private void OnFileDeleted(object sender, FileSystemEventArgs e)
-        {
-            // Handle file deletion if needed
         }
 
         private void UpdateProjectFile(string fullPath)

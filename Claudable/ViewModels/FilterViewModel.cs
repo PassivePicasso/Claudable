@@ -33,7 +33,6 @@ namespace Claudable.ViewModels
 
         public ICommand AddFilterCommand { get; private set; }
         public ICommand RemoveFilterCommand { get; private set; }
-        public ICommand ApplyFiltersCommand { get; set; }
 
         public FilterViewModel()
         {
@@ -53,14 +52,12 @@ namespace Claudable.ViewModels
             {
                 Filters.Add(NewFilter.Trim());
                 NewFilter = string.Empty;
-                ApplyFiltersCommand?.Execute(null);
             }
         }
 
         private void RemoveFilter(string filter)
         {
             Filters.Remove(filter);
-            ApplyFiltersCommand?.Execute(null);
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)

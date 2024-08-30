@@ -321,7 +321,7 @@
     </DataTemplate>
 
     <!-- ProjectFolder Template -->
-    <HierarchicalDataTemplate DataType="{x:Type vm:ProjectFolder}" ItemsSource="{Binding Children}">
+    <HierarchicalDataTemplate DataType="{x:Type vm:ProjectFolder}" ItemsSource="{Binding FilteredChildren}">
         <HierarchicalDataTemplate.ItemContainerStyle>
             <Style TargetType="TreeViewItem">
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />

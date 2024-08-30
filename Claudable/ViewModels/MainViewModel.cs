@@ -3,9 +3,11 @@ using Claudable.Services;
 using Claudable.Utilities;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -21,7 +23,6 @@ namespace Claudable.ViewModels
         private bool _isPanelsSwapped;
         private int _selectedTabIndex;
         private FileWatcher _fileWatcher;
-        private bool _showOnlyTrackedArtifacts;
         private ProjectAssociationService _projectAssociationService;
         private string _currentProjectUrl;
         private FilterMode _currentFilterMode;
@@ -35,6 +36,7 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
+
         public ProjectFolder RootProjectFolder
         {
             get => _rootProjectFolder;
@@ -46,6 +48,7 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
+
         public FilterViewModel FilterViewModel
         {
             get => _filterViewModel;
@@ -55,6 +58,7 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
+
         public DownloadManager DownloadManager
         {
             get => _downloadManager;
@@ -64,6 +68,7 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
+
         public bool IsPanelsSwapped
         {
             get => _isPanelsSwapped;
@@ -76,6 +81,7 @@ namespace Claudable.ViewModels
                 }
             }
         }
+
         public int SelectedTabIndex
         {
             get => _selectedTabIndex;
@@ -88,6 +94,7 @@ namespace Claudable.ViewModels
                 }
             }
         }
+
         public FilterMode CurrentFilterMode
         {
             get => _currentFilterMode;
@@ -101,13 +108,14 @@ namespace Claudable.ViewModels
                 }
             }
         }
+
         public ObservableCollection<SvgArtifactViewModel> SvgArtifacts => ArtifactManager.SvgArtifacts;
+
         public ICommand SetProjectRootCommand { get; private set; }
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
         public ICommand UpdateArtifactStatusCommand { get; private set; }
         public ICommand DropSvgArtifactCommand { get; private set; }
-        public ICommand ExecuteFindInBrowserCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -120,48 +128,90 @@ namespace Claudable.ViewModels
             SaveStateCommand = new RelayCommand(SaveState);
             LoadStateCommand = new RelayCommand(LoadState);
             UpdateArtifactStatusCommand = new RelayCommand(UpdateArtifactStatus);
-            FilterViewModel.ApplyFiltersCommand = new RelayCommand(ApplyFilters);
             DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
         }
 
-        public void MoveDownloadedFile(DownloadItem downloadItem, ProjectFolder targetFolder)
+        private void InitializeFileWatcher()
         {
-            string sourceFilePath = downloadItem.Path;
-            string destinationFilePath = Path.Combine(targetFolder.FullPath, Path.GetFileName(sourceFilePath));
+            _fileWatcher?.Dispose();
+            if (RootProjectFolder == null || string.IsNullOrEmpty(RootProjectFolder.FullPath) || !Directory.Exists(RootProjectFolder.FullPath))
+                return;
 
-            try
-            {
-                File.Move(sourceFilePath, destinationFilePath);
-                DownloadManager.Downloads.Remove(downloadItem);
-
-                // Add the new file to the target folder's children
-                ProjectFile newFile = new ProjectFile(Path.GetFileName(destinationFilePath), destinationFilePath);
-                targetFolder.AddChild(newFile);
-
-                // Sort the children after adding the new file
-                SortFolderChildren(targetFolder);
-
-                // Update artifact status for the new file
-                UpdateArtifactStatus();
-
-                // Apply filters to ensure the new file is displayed correctly
-                ApplyFilters();
-
-                OnPropertyChanged(nameof(RootProjectFolder));
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error moving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _fileWatcher = new FileWatcher(RootProjectFolder, UpdateProjectStructure);
         }
 
-        private void SortFolderChildren(ProjectFolder folder)
+        private void UpdateProjectStructure()
         {
-            var sortedChildren = folder.Children.OrderBy(c => !c.IsFolder).ThenBy(c => c.Name).ToList();
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                UpdateProjectStructureRecursive(RootProjectFolder);
+                UpdateArtifactStatus();
+                ApplyFilters();
+                OnPropertyChanged(nameof(RootProjectFolder));
+            });
+        }
+
+        private void UpdateProjectStructureRecursive(ProjectFolder folder)
+        {
+            var currentItems = new HashSet<string>(folder.Children.Select(c => c.Name));
+            var entries = Directory.EnumerateFileSystemEntries(folder.FullPath)
+                .Where(filePath => !FilterViewModel.Filters.Any(filter => filePath.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
+                .Select(Path.GetFileName);
+            var directoryItems = new HashSet<string>(entries);
+
+            // Remove items that no longer exist
+            var itemsToRemove = currentItems.Except(directoryItems).ToList();
+            foreach (var itemName in itemsToRemove)
+            {
+                var itemToRemove = folder.Children.FirstOrDefault(c => c.Name == itemName);
+                if (itemToRemove != null)
+                {
+                    folder.Children.Remove(itemToRemove);
+                }
+            }
+
+            // Add new items
+            var itemsToAdd = directoryItems.Except(currentItems);
+            foreach (var itemName in itemsToAdd)
+            {
+                var fullPath = Path.Combine(folder.FullPath, itemName);
+                FileSystemItem newItem;
+                if (Directory.Exists(fullPath))
+                {
+                    newItem = new ProjectFolder(itemName, fullPath, folder);
+                    folder.Children.Add(newItem);
+                    UpdateProjectStructureRecursive((ProjectFolder)newItem);
+                }
+                else
+                {
+                    newItem = new ProjectFile(itemName, fullPath, folder);
+                    folder.Children.Add(newItem);
+                }
+                ExpandToItem(newItem);
+            }
+
+            // Recursively update existing subfolders
+            foreach (var child in folder.Children.OfType<ProjectFolder>())
+            {
+                UpdateProjectStructureRecursive(child);
+            }
+
+            // Sort children
+            var sortedChildren = folder.Children.OrderBy(c => c is ProjectFile).ThenBy(c => c.Name).ToList();
             folder.Children.Clear();
             foreach (var child in sortedChildren)
             {
                 folder.Children.Add(child);
+            }
+        }
+
+        private void ExpandToItem(FileSystemItem item)
+        {
+            var parent = item.Parent as ProjectFolder;
+            while (parent != null)
+            {
+                parent.IsExpanded = true;
+                parent = parent.Parent as ProjectFolder;
             }
         }
 
@@ -206,49 +256,80 @@ namespace Claudable.ViewModels
             }
         }
 
-        private void InitializeFileWatcher()
-        {
-            _fileWatcher?.Dispose();
-            if (string.IsNullOrEmpty(RootProjectFolder?.FullPath) || !Directory.Exists(RootProjectFolder.FullPath))
-                return;
-
-            _fileWatcher = new FileWatcher(RootProjectFolder);
-        }
-
         private void LoadProjectStructure(string rootPath)
         {
-            RootProjectFolder = new ProjectFolder(rootPath, rootPath);
-            LoadProjectStructureRecursive(RootProjectFolder);
-            UpdateArtifactStatus();
+            if (RootProjectFolder == null || RootProjectFolder.FullPath != rootPath)
+            {
+                RootProjectFolder = new ProjectFolder(Path.GetFileName(rootPath), rootPath);
+            }
+            UpdateProjectStructureRecursive(RootProjectFolder);
             ApplyFilters();
             OnPropertyChanged(nameof(RootProjectFolder));
         }
 
-        private void LoadProjectStructureRecursive(ProjectFolder folder)
+        private void ApplyFilters()
         {
-            try
+            if (RootProjectFolder != null)
             {
-                if (!Directory.Exists(folder.FullPath))
-                    return;
-                foreach (var directory in Directory.GetDirectories(folder.FullPath))
-                {
-                    var subFolder = new ProjectFolder(Path.GetFileName(directory), directory, folder);
-                    folder.AddChild(subFolder);
-                    LoadProjectStructureRecursive(subFolder);
-                }
+                var files = EnumerateProjectFiles().ToList();
+                var tracked = files.Where(f => f.IsTrackedAsArtifact).ToList();
+                var newer = tracked.Where(f => f.IsLocalNewer).ToList();
 
-                foreach (var file in Directory.GetFiles(folder.FullPath))
+                RootProjectFolder.ApplyFilter(CurrentFilterMode);
+                OnPropertyChanged(nameof(RootProjectFolder));
+            }
+        }
+
+        IEnumerable<ProjectFile> EnumerateProjectFiles(ProjectFolder projectFolder = null)
+        {
+            if (projectFolder == null)
+                projectFolder = RootProjectFolder;
+
+            foreach (var child in projectFolder.Children)
+            {
+                switch (child)
                 {
-                    folder.AddChild(new ProjectFile(Path.GetFileName(file), file, folder));
+                    case ProjectFile file:
+                        yield return file;
+                        break;
+                    case ProjectFolder folder:
+                        foreach (var descendant in EnumerateProjectFiles(folder))
+                            yield return descendant;
+                        break;
                 }
             }
-            catch (UnauthorizedAccessException ex)
+        }
+
+        private void UpdateArtifactStatus()
+        {
+            if (RootProjectFolder != null && ArtifactManager.Artifacts != null)
             {
-                Console.WriteLine($"Unauthorized access to {folder.FullPath}: {ex.Message}");
+                UpdateArtifactStatusRecursive(RootProjectFolder);
+                if (!string.IsNullOrEmpty(_currentProjectUrl))
+                    _projectAssociationService.UpdateArtifacts(_currentProjectUrl, ArtifactManager.Artifacts.ToList());
             }
-            catch (Exception ex)
+        }
+
+        private void UpdateArtifactStatusRecursive(ProjectFolder folder)
+        {
+            foreach (var item in folder.Children)
             {
-                Console.WriteLine($"Error loading folder {folder.FullPath}: {ex.Message}");
+                if (item is ProjectFile file)
+                {
+                    var artifact = ArtifactManager.Artifacts.FirstOrDefault(a => a.FileName == file.Name);
+                    if (artifact != null)
+                    {
+                        file.UpdateFromArtifact(artifact);
+                    }
+                    else
+                    {
+                        file.AssociatedArtifact = null;
+                    }
+                }
+                else if (item is ProjectFolder subFolder)
+                {
+                    UpdateArtifactStatusRecursive(subFolder);
+                }
             }
         }
 
@@ -293,54 +374,13 @@ namespace Claudable.ViewModels
                     // Add the new file to the project structure
                     var newFile = new ProjectFile(fileName, fullPath, targetFolder);
                     targetFolder.AddChild(newFile);
+                    ExpandToItem(newFile);
 
                     MessageBox.Show($"File saved successfully: {fullPath}");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error saving file: {ex.Message}");
-                }
-            }
-        }
-
-        private void ApplyFilters()
-        {
-            if (RootProjectFolder != null)
-            {
-                RootProjectFolder.ApplyFilter(FilterViewModel.Filters.ToArray(), CurrentFilterMode);
-                OnPropertyChanged(nameof(RootProjectFolder));
-            }
-        }
-
-        private void UpdateArtifactStatus()
-        {
-            if (RootProjectFolder != null && ArtifactManager.Artifacts != null)
-            {
-                UpdateArtifactStatusRecursive(RootProjectFolder);
-                if (!string.IsNullOrEmpty(_currentProjectUrl))
-                    _projectAssociationService.UpdateArtifacts(_currentProjectUrl, ArtifactManager.Artifacts.ToList());
-            }
-        }
-
-        private void UpdateArtifactStatusRecursive(ProjectFolder folder)
-        {
-            foreach (var item in folder.Children)
-            {
-                if (item is ProjectFile file)
-                {
-                    var artifact = ArtifactManager.Artifacts.FirstOrDefault(a => a.FileName == file.Name);
-                    if (artifact != null)
-                    {
-                        file.UpdateFromArtifact(artifact);
-                    }
-                    else
-                    {
-                        file.AssociatedArtifact = null;
-                    }
-                }
-                else if (item is ProjectFolder subFolder)
-                {
-                    UpdateArtifactStatusRecursive(subFolder);
                 }
             }
         }
