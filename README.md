@@ -2,6 +2,20 @@
 
 Claudable is a sophisticated desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
 
+#### No association with Anthropic or Claude.ai
+I am an independent developer and this project has no association with claude.ai 
+nor Anrhropic.
+
+
+##### A note about web security with embedded browsers
+While Claudable does not ask you for your credentials, while you're logged into claude ai. The application does have the same access as you via the web browser.
+this is true for all embedded browser applications and browser extensions.
+
+users should always be cautious with embedded browser applications that access content not produced and provided by the application creator.
+
+this project is simple and small enough for anyone consuming it to review the code, and even upload the entire source to a claude project to help you evaluate it and understand the security implications.
+
+
 ## Key Features
 
 1. **Web Integration**
