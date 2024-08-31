@@ -7,14 +7,16 @@ I am an independent developer and this project has no association with claude.ai
 nor Anthropic.
 
 
-#### A note about web security with embedded browsers
-While Claudable does not ask you for your credentials, while you're logged into claude ai. The application does have the same access as you via the web browser.
-this is true for all embedded browser applications and browser extensions.
+#### A Note about Embedded Web Browser Security
+Claudable, like other applications with embedded browsers, has full access to web content within its browser component. This includes the ability to execute JavaScript and interact with logged-in sessions. 
 
-users should always be cautious with embedded browser applications that access content not produced and provided by the application creator.
+While Claudable doesn't request or store Claude AI credentials directly, the embedded browser has the same access as a regular browser when you're logged in. This level of access is standard for embedded browser applications and extensions.
 
-this project is simple and small enough for anyone consuming it to review the code, and even upload the entire source to a claude project to help you evaluate it and understand the security implications.
+Users should exercise caution and only use embedded browser applications from trusted sources, especially when they access external web content. 
 
+The source code of Claudable is open and concise, allowing for easy review. If concerned about security implications, users can analyze the entire codebase, including uploading it to a Claude AI project for evaluation.
+
+It's important to remember that embedded browser applications always require a high level of trust. Use Claudable, as you would any similar application, with appropriate caution.
 
 ## Key Features
 
