@@ -4,7 +4,7 @@ Claudable is a sophisticated desktop application designed to enhance the Claude 
 
 #### No association with Anthropic or Claude.ai
 I am an independent developer and this project has no association with claude.ai 
-nor Anrhropic.
+nor Anthropic.
 
 
 ##### A note about web security with embedded browsers
