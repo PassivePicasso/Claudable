@@ -7,7 +7,7 @@ I am an independent developer and this project has no association with claude.ai
 nor Anthropic.
 
 
-##### A note about web security with embedded browsers
+#### A note about web security with embedded browsers
 While Claudable does not ask you for your credentials, while you're logged into claude ai. The application does have the same access as you via the web browser.
 this is true for all embedded browser applications and browser extensions.
 
