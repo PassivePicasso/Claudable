@@ -205,8 +205,10 @@
     </Style>
 
     <Style x:Key="SmallButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Padding" Value="5,2"/>
-        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="Padding" Value="5,-2,5,2"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
     <!-- Title Bar Button Style -->
@@ -334,7 +336,7 @@
     </HierarchicalDataTemplate>
 
     <DataTemplate DataType="{x:Type vm:ProjectFile}">
-        <Grid Margin="2" Height="18" HorizontalAlignment="Stretch" Grid.IsSharedSizeScope="True" 
+        <Grid Margin="2" Height="20" HorizontalAlignment="Stretch" Grid.IsSharedSizeScope="True" 
               Background="Transparent">
             <Grid.ToolTip>
                 <StackPanel Orientation="Vertical" Margin="2">
@@ -348,11 +350,18 @@
                     </StackPanel>
                 </StackPanel>
             </Grid.ToolTip>
+            <Grid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" 
+                              Command="{Binding DataContext.DoubleClickTrackedArtifactCommand, 
+                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                              CommandParameter="{Binding}"/>
+            </Grid.InputBindings>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="Icon"/>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="SyncState"/>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="Status"/>
                 <ColumnDefinition Width="*" MinWidth="200"    SharedSizeGroup="FileName"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Remove"/>
             </Grid.ColumnDefinitions>
 
             <controls:FileSystemIcon Grid.Column="2" Path="{Binding FullPath}" Width="16" Height="16"/>
@@ -374,6 +383,12 @@
                     Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="A" FontSize="10" Foreground="{StaticResource ClaudeTextBrush}" HorizontalAlignment="Center"/>
             </Border>
+
+            <Button Grid.Column="4" Content="Untrack" 
+                    Command="{Binding UntrackArtifactCommand}"
+                    CommandParameter="{Binding}"
+                    Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    Style="{StaticResource SmallButtonStyle}"/>
         </Grid>
     </DataTemplate>
 

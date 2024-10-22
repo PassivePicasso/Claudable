@@ -1,13 +1,21 @@
+using Claudable.ViewModels;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using Newtonsoft.Json;
 using System.IO;
+using System.Text.RegularExpressions;
 
 public class WebViewManager
 {
+    public static WebViewManager Instance { get; private set; }
+    private string _baseUrl = "https://api.claude.ai";
+
+    Regex DataCollector = new Regex(@"^https://api\.claude\.ai/api/organizations/(?<organizationId>.*?)/projects/(?<projectId>.*?)/docs$");
     private WebView2 _webView;
     private string _lastVisitedUrl;
     private string _currentProjectUrl;
     private string _lastDocsResponse;
+    private string _activeOrganizationUuid;
 
     public string LastVisitedUrl => _lastVisitedUrl;
     public string CurrentProjectUrl => _currentProjectUrl;
@@ -19,6 +27,9 @@ public class WebViewManager
     {
         _webView = webView;
         _lastVisitedUrl = initialUrl;
+        if (Instance != null)
+            throw new InvalidOperationException("Cannot instantiate more than 1 WebViewManager");
+        Instance = this;
     }
 
     public async Task InitializeAsync()
@@ -32,7 +43,70 @@ public class WebViewManager
         ConfigureWebViewSettings();
         SetupWebViewEventHandlers();
     }
+    public async Task DeleteArtifact(ArtifactViewModel artifact)
+    {
+        if (string.IsNullOrEmpty(_activeOrganizationUuid))
+        {
+            throw new InvalidOperationException("Active organization UUID is not set.");
+        }
 
+        string url = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{artifact.ProjectUuid}/docs/{artifact.Uuid}";
+
+        // Create a JavaScript function to perform the DELETE request
+        string script = @"
+                async function deleteArtifact(url) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'DELETE',
+                            headers: {
+                                'authority': 'api.claude.ai',
+                                'origin': 'https://claude.ai',
+                                'accept': '*/*',
+                                'accept-language': 'en-US,en;q=0.9'
+                            },
+                            credentials: 'include'  // Important: Includes cookies for authentication
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        // For 204 No Content responses, return success object
+                        if (response.status === 204) {
+                            return { success: true };
+                        }
+                
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Error:', error);
+                        throw error;
+                    }
+                }
+                deleteArtifact('" + url + @"');
+            ";
+        try
+        {
+            // Execute the script in the WebView2
+            string resultJson = await _webView.CoreWebView2.ExecuteScriptAsync(script);
+
+            // Parse the result
+            var result = JsonConvert.DeserializeObject<DeleteArtifactResult>(resultJson);
+
+            // Check if the deletion was successful
+            if (result?.Success == true)
+            {
+                //OnArtifactDeleted(artifact);
+                _webView.Reload();
+            }
+            else
+            {
+                throw new Exception($"Failed to delete artifact: {result}");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error deleting artifact: {e.Message}");
+            throw;
+        }
+    }
     public void Navigate(string url)
     {
         _webView.Source = new Uri(url);
@@ -75,13 +149,21 @@ public class WebViewManager
                 {
                     try
                     {
+                        var path = args.Request.Uri;
+                        var match = DataCollector.Match(path);
+                        if (match.Success)
+                            _activeOrganizationUuid = match.Groups["organizationId"].Value;
+
                         var response = args.Response;
                         var stream = await response.GetContentAsync();
                         using var reader = new StreamReader(stream);
                         _lastDocsResponse = reader.ReadToEnd();
                         DocsReceived?.Invoke(this, _lastDocsResponse);
                     }
-                    catch (Exception) { }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 }
                 break;
         }
@@ -108,5 +190,10 @@ public class WebViewManager
                 ProjectChanged?.Invoke(this, _currentProjectUrl);
             }
         }
+    }
+    public class DeleteArtifactResult
+    {
+        [JsonProperty("success")]
+        public bool Success { get; set; }
     }
 }

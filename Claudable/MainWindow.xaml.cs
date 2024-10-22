@@ -21,6 +21,8 @@ namespace Claudable
         private Point _startPoint;
         private DragAdorner dragAdorner = new DragAdorner();
 
+        public WebViewManager WebViewManager => _webViewManager;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -32,6 +34,7 @@ namespace Claudable
             _webViewManager.DocsReceived += _webViewManager_DocsReceived;
             _webViewManager.ProjectChanged += _webViewManager_ProjectChanged;
             _windowStateManager = new WindowStateManager(this, _viewModel, _webViewManager);
+            _viewModel.WebViewManager = _webViewManager;
 
             MouseHook.MouseMoved += OnMouseMoved;
             MouseHook.SetHook();
@@ -61,7 +64,7 @@ namespace Claudable
 
         private async void InitializeAsync()
         {
-            await _webViewManager.InitializeAsync();
+            await WebViewManager.InitializeAsync();
             _windowStateManager.LoadState();
             _viewModel.LoadStateCommand.Execute(null);
 

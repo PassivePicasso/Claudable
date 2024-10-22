@@ -1,6 +1,7 @@
 ﻿using Claudable.Models;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace Claudable.ViewModels
 {
@@ -50,12 +51,15 @@ namespace Claudable.ViewModels
 
         public bool IsTrackedAsArtifact => AssociatedArtifact != null;
 
+        public ICommand UntrackArtifactCommand { get; private set; }
+
         public ProjectFile(string name, string fullPath, FileSystemItem parent = null) : base()
         {
             Name = name;
             FullPath = fullPath;
             Parent = parent;
             LocalLastModified = System.IO.File.GetLastWriteTime(fullPath);
+            UntrackArtifactCommand = new RelayCommand(UntrackArtifact);
         }
 
         public void UpdateFromArtifact(ArtifactViewModel artifact)
@@ -63,6 +67,18 @@ namespace Claudable.ViewModels
             AssociatedArtifact = artifact;
             ArtifactLastModified = artifact.CreatedAt;
             OnPropertyChanged(nameof(IsTrackedAsArtifact));
+        }
+
+        public void UntrackArtifact()
+        {
+            if (AssociatedArtifact != null)
+            {
+                _ = WebViewManager.Instance.DeleteArtifact(AssociatedArtifact);
+                AssociatedArtifact = null;
+                ArtifactLastModified = DateTime.MinValue;
+                OnPropertyChanged(nameof(IsTrackedAsArtifact));
+                OnPropertyChanged(nameof(IsLocalNewer));
+            }
         }
 
         public new event PropertyChangedEventHandler PropertyChanged;

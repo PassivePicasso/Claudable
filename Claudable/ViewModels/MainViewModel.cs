@@ -3,11 +3,9 @@ using Claudable.Services;
 using Claudable.Utilities;
 using Microsoft.Win32;
 using Newtonsoft.Json;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -26,6 +24,7 @@ namespace Claudable.ViewModels
         private ProjectAssociationService _projectAssociationService;
         private string _currentProjectUrl;
         private FilterMode _currentFilterMode;
+        private WebViewManager _webViewManager;
 
         public ArtifactManager ArtifactManager
         {
@@ -108,6 +107,15 @@ namespace Claudable.ViewModels
                 }
             }
         }
+        public WebViewManager WebViewManager
+        {
+            get => _webViewManager;
+            set
+            {
+                _webViewManager = value;
+                OnPropertyChanged();
+            }
+        }
 
         public ObservableCollection<SvgArtifactViewModel> SvgArtifacts => ArtifactManager.SvgArtifacts;
 
@@ -116,6 +124,7 @@ namespace Claudable.ViewModels
         public ICommand LoadStateCommand { get; private set; }
         public ICommand UpdateArtifactStatusCommand { get; private set; }
         public ICommand DropSvgArtifactCommand { get; private set; }
+        public ICommand DoubleClickTrackedArtifactCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -129,8 +138,17 @@ namespace Claudable.ViewModels
             LoadStateCommand = new RelayCommand(LoadState);
             UpdateArtifactStatusCommand = new RelayCommand(UpdateArtifactStatus);
             DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
+            DoubleClickTrackedArtifactCommand = new RelayCommand<ProjectFile>(OnDoubleClickTrackedArtifact);
         }
 
+        private void OnDoubleClickTrackedArtifact(ProjectFile projectFile)
+        {
+            if (projectFile?.AssociatedArtifact != null)
+            {
+                // Implement the logic to scroll to and highlight the corresponding item in the Project Knowledge section
+                //_ = WebViewManager.ScrollToProjectKnowledgeItem(projectFile.AssociatedArtifact.ProjectKnowledgeId);
+            }
+        }
         private void InitializeFileWatcher()
         {
             _fileWatcher?.Dispose();
