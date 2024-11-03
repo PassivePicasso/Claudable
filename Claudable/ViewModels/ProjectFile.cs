@@ -1,5 +1,7 @@
 ﻿using Claudable.Models;
+using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
@@ -11,17 +13,19 @@ namespace Claudable.ViewModels
         private DateTime _localLastModified;
         private DateTime _artifactLastModified;
         private bool _isLocalNewer;
-        private bool _isTrackedAsArtifact;
 
         public ArtifactViewModel AssociatedArtifact
         {
             get => _associatedArtifact;
             set
             {
-                _associatedArtifact = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsTrackedAsArtifact));
-                OnPropertyChanged(nameof(IsLocalNewer));
+                if (_associatedArtifact != value)
+                {
+                    _associatedArtifact = value;
+                    OnPropertyChanged();
+                    UpdateIsLocalNewer();
+                    OnPropertyChanged(nameof(IsTrackedAsArtifact));
+                }
             }
         }
 
@@ -30,9 +34,12 @@ namespace Claudable.ViewModels
             get => _localLastModified;
             set
             {
-                _localLastModified = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsLocalNewer));
+                if (_localLastModified != value)
+                {
+                    _localLastModified = value;
+                    OnPropertyChanged();
+                    UpdateIsLocalNewer();
+                }
             }
         }
 
@@ -41,16 +48,31 @@ namespace Claudable.ViewModels
             get => _artifactLastModified;
             set
             {
-                _artifactLastModified = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsLocalNewer));
+                if (_artifactLastModified != value)
+                {
+                    _artifactLastModified = value;
+                    OnPropertyChanged();
+                    UpdateIsLocalNewer();
+                }
             }
         }
 
-        public bool IsLocalNewer => LocalLastModified > ArtifactLastModified;
+        public bool IsLocalNewer
+        {
+            get => _isLocalNewer;
+            private set
+            {
+                if (_isLocalNewer != value)
+                {
+                    _isLocalNewer = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public bool IsTrackedAsArtifact => AssociatedArtifact != null;
 
+        public ICommand TrackArtifactCommand { get; private set; }
         public ICommand UntrackArtifactCommand { get; private set; }
 
         public ProjectFile(string name, string fullPath, FileSystemItem parent = null) : base()
@@ -58,32 +80,94 @@ namespace Claudable.ViewModels
             Name = name;
             FullPath = fullPath;
             Parent = parent;
-            LocalLastModified = System.IO.File.GetLastWriteTime(fullPath);
+            LocalLastModified = System.IO.File.GetLastWriteTimeUtc(fullPath);
+            TrackArtifactCommand = new RelayCommand(TrackArtifact);
             UntrackArtifactCommand = new RelayCommand(UntrackArtifact);
+        }
+
+        private void UpdateIsLocalNewer()
+        {
+            if (AssociatedArtifact == null)
+            {
+                IsLocalNewer = false;
+                return;
+            }
+
+            // Ensure both timestamps are in UTC for comparison
+            var localUtc = LocalLastModified.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(LocalLastModified, DateTimeKind.Local).ToUniversalTime()
+                : LocalLastModified.ToUniversalTime();
+
+            var artifactUtc = ArtifactLastModified.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(ArtifactLastModified, DateTimeKind.Local).ToUniversalTime()
+                : ArtifactLastModified.ToUniversalTime();
+
+            IsLocalNewer = localUtc > artifactUtc;
         }
 
         public void UpdateFromArtifact(ArtifactViewModel artifact)
         {
+            if (artifact == null)
+            {
+                AssociatedArtifact = null;
+                ArtifactLastModified = DateTime.MinValue;
+                return;
+            }
+
             AssociatedArtifact = artifact;
-            ArtifactLastModified = artifact.CreatedAt;
-            OnPropertyChanged(nameof(IsTrackedAsArtifact));
+
+            // Ensure the artifact timestamp is properly handled
+            var artifactTime = artifact.CreatedAt;
+            if (artifactTime.Kind == DateTimeKind.Unspecified)
+            {
+                artifactTime = DateTime.SpecifyKind(artifactTime, DateTimeKind.Utc);
+            }
+            else if (artifactTime.Kind == DateTimeKind.Local)
+            {
+                artifactTime = artifactTime.ToUniversalTime();
+            }
+
+            ArtifactLastModified = artifactTime;
+            UpdateIsLocalNewer();
         }
 
-        public void UntrackArtifact()
+        private async void TrackArtifact()
+        {
+            try
+            {
+                var content = await File.ReadAllTextAsync(FullPath);
+                var artifact = await WebViewManager.Instance.CreateArtifact(Name, content);
+                if (artifact != null)
+                {
+                    UpdateFromArtifact(artifact);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error tracking artifact: {ex.Message}");
+            }
+        }
+
+        public async void UntrackArtifact()
         {
             if (AssociatedArtifact != null)
             {
-                _ = WebViewManager.Instance.DeleteArtifact(AssociatedArtifact);
-                AssociatedArtifact = null;
-                ArtifactLastModified = DateTime.MinValue;
-                OnPropertyChanged(nameof(IsTrackedAsArtifact));
-                OnPropertyChanged(nameof(IsLocalNewer));
+                try
+                {
+                    await WebViewManager.Instance.DeleteArtifact(AssociatedArtifact);
+                    AssociatedArtifact = null;
+                    ArtifactLastModified = DateTime.MinValue;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error untracking artifact: {ex.Message}");
+                }
             }
         }
 
         public new event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

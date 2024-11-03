@@ -335,35 +335,38 @@
         </StackPanel>
     </HierarchicalDataTemplate>
 
+    <!-- Project File Item Template -->
     <DataTemplate DataType="{x:Type vm:ProjectFile}">
         <Grid Margin="2" Height="20" HorizontalAlignment="Stretch" Grid.IsSharedSizeScope="True" 
-              Background="Transparent">
+          Background="Transparent" >
             <Grid.ToolTip>
                 <StackPanel Orientation="Vertical" Margin="2">
                     <StackPanel Orientation="Horizontal" Margin="2">
                         <TextBlock Text="   Local: " FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}"/>
-                        <TextBlock Text="{Binding LocalLastModified, StringFormat={}{0:g}}" FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding LocalLastModified, StringFormat={}{0:g}}" FontSize="10" 
+                             Foreground="{StaticResource ClaudeSecondaryBrush}" Margin="0,0,10,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="2">
                         <TextBlock Text="Artifact: " FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}"/>
-                        <TextBlock Text="{Binding ArtifactLastModified, StringFormat={}{0:g}}" FontSize="10" Foreground="{StaticResource ClaudeSecondaryBrush}"/>
+                        <TextBlock Text="{Binding ArtifactLastModified, StringFormat={}{0:g}}" FontSize="10" 
+                             Foreground="{StaticResource ClaudeSecondaryBrush}"/>
                     </StackPanel>
                 </StackPanel>
             </Grid.ToolTip>
             <Grid.InputBindings>
                 <MouseBinding Gesture="LeftDoubleClick" 
-                              Command="{Binding DataContext.DoubleClickTrackedArtifactCommand, 
-                                        RelativeSource={RelativeSource AncestorType=Window}}"
-                              CommandParameter="{Binding}"/>
+                          Command="{Binding DataContext.DoubleClickTrackedArtifactCommand, 
+                                    RelativeSource={RelativeSource AncestorType=Window}}"
+                          CommandParameter="{Binding}"/>
             </Grid.InputBindings>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="Icon"/>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="SyncState"/>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="Status"/>
-                <ColumnDefinition Width="*" MinWidth="200"    SharedSizeGroup="FileName"/>
-                <ColumnDefinition Width="Auto" SharedSizeGroup="Remove"/>
+                <ColumnDefinition Width="*" MinWidth="200" SharedSizeGroup="FileName"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="TrackButton"/>
             </Grid.ColumnDefinitions>
-
+            
             <controls:FileSystemIcon Grid.Column="2" Path="{Binding FullPath}" Width="16" Height="16"/>
 
             <TextBlock Grid.Column="3" Text="{Binding Name}" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
@@ -371,24 +374,33 @@
             <Border Grid.Column="0" Grid.ColumnSpan="2" Width="34"/>
 
             <Border Grid.Column="0" CornerRadius="4" Width="16" Height="16"
-                    Background="{Binding IsLocalNewer, Converter={StaticResource BoolToColorConverter}}"
-                    Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Background="{Binding IsLocalNewer, Converter={StaticResource BoolToColorConverter}}"
+                Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="{Binding IsLocalNewer, Converter={StaticResource UploadOrDownload}}" 
-                           FontSize="16" Foreground="{StaticResource ClaudeTextBrush}" 
-                           Margin="0,-4,0,0"
-                           HorizontalAlignment="Center"/>
+                       FontSize="16" Foreground="{StaticResource ClaudeTextBrush}" 
+                       Margin="0,-4,0,0"
+                       HorizontalAlignment="Center"/>
             </Border>
             <Border Grid.Column="1" CornerRadius="4" Width="16"  Height="16"
-                    Background="{StaticResource ClaudeHighlightBrush}"
-                    Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Background="{StaticResource ClaudeHighlightBrush}"
+                Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="A" FontSize="10" Foreground="{StaticResource ClaudeTextBrush}" HorizontalAlignment="Center"/>
             </Border>
 
+            <!-- Track Button -->
+            <Button Grid.Column="4" Content="Track" 
+                Command="{Binding TrackArtifactCommand}"
+                Visibility="{Binding IsTrackedAsArtifact, 
+                           Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                Style="{StaticResource SmallButtonStyle}"
+                Margin="0,0,4,0"/>
+
+            <!-- Untrack Button -->
             <Button Grid.Column="4" Content="Untrack" 
-                    Command="{Binding UntrackArtifactCommand}"
-                    CommandParameter="{Binding}"
-                    Visibility="{Binding IsTrackedAsArtifact, Converter={StaticResource BooleanToVisibilityConverter}}"
-                    Style="{StaticResource SmallButtonStyle}"/>
+                Command="{Binding UntrackArtifactCommand}"
+                Visibility="{Binding IsTrackedAsArtifact, 
+                           Converter={StaticResource BooleanToVisibilityConverter}}"
+                Style="{StaticResource SmallButtonStyle}"/>
         </Grid>
     </DataTemplate>
 
