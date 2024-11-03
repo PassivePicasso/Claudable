@@ -1,6 +1,5 @@
-using System;
-using System.IO;
 using Claudable.ViewModels;
+using System.IO;
 
 namespace Claudable.Services
 {
@@ -9,12 +8,17 @@ namespace Claudable.Services
         private FileSystemWatcher _watcher;
         private ProjectFolder _rootFolder;
         private Action _updateProjectStructure;
+        private readonly object _lockObject = new object();
+        private Timer _batchTimer;
+        private volatile bool _changesPending;
+        private const int BATCH_DELAY_MS = 500; // Batch changes for 500ms
 
         public FileWatcher(ProjectFolder rootFolder, Action updateProjectStructure)
         {
             _rootFolder = rootFolder;
             _updateProjectStructure = updateProjectStructure;
             InitializeWatcher();
+            _batchTimer = new Timer(OnBatchTimerElapsed);
         }
 
         private void InitializeWatcher()
@@ -34,7 +38,20 @@ namespace Claudable.Services
 
         private void OnFileSystemChanged(object sender, FileSystemEventArgs e)
         {
-            _updateProjectStructure();
+            lock (_lockObject)
+            {
+                _changesPending = true;
+                _batchTimer.Change(BATCH_DELAY_MS, Timeout.Infinite);
+            }
+        }
+
+        private void OnBatchTimerElapsed(object state)
+        {
+            if (_changesPending)
+            {
+                _changesPending = false;
+                _updateProjectStructure();
+            }
         }
 
         private void OnFileChanged(object sender, FileSystemEventArgs e)
@@ -53,9 +70,8 @@ namespace Claudable.Services
 
         private ProjectFile FindProjectFile(ProjectFolder folder, string fullPath)
         {
-            for (int i = 0; i < folder.Children.Count; i++)
+            foreach (var item in folder.Children)
             {
-                Models.FileSystemItem? item = folder.Children[i];
                 if (item is ProjectFile file && file.FullPath == fullPath)
                 {
                     return file;
@@ -75,6 +91,7 @@ namespace Claudable.Services
         public void Dispose()
         {
             _watcher?.Dispose();
+            _batchTimer?.Dispose();
         }
     }
 }

@@ -3,6 +3,7 @@ using Claudable.Services;
 using Claudable.Utilities;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -25,6 +26,9 @@ namespace Claudable.ViewModels
         private string _currentProjectUrl;
         private FilterMode _currentFilterMode;
         private WebViewManager _webViewManager;
+        private readonly ConcurrentDictionary<string, FileSystemItem> _pathCache = new();
+        private readonly object _updateLock = new object();
+        private bool _isUpdating;
 
         public ArtifactManager ArtifactManager
         {
@@ -157,72 +161,112 @@ namespace Claudable.ViewModels
 
             _fileWatcher = new FileWatcher(RootProjectFolder, UpdateProjectStructure);
         }
-
         private void UpdateProjectStructure()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            if (_isUpdating)
+                return;
+
+            lock (_updateLock)
             {
-                UpdateProjectStructureRecursive(RootProjectFolder);
-                UpdateArtifactStatus();
-                ApplyFilters();
-                OnPropertyChanged(nameof(RootProjectFolder));
-            });
+                if (_isUpdating)
+                    return;
+
+                _isUpdating = true;
+                try
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var changes = UpdateProjectStructureRecursive(RootProjectFolder);
+                        if (changes)
+                        {
+                            UpdateArtifactStatus();
+                            ApplyFilters();
+                            OnPropertyChanged(nameof(RootProjectFolder));
+                        }
+                    });
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
+            }
         }
 
-        private void UpdateProjectStructureRecursive(ProjectFolder folder)
+        private bool UpdateProjectStructureRecursive(ProjectFolder folder)
         {
-            var currentItems = new HashSet<string>(folder.Children.Select(c => c.Name));
+            bool hasChanges = false;
+            var currentItems = new HashSet<string>(folder.Children.Select(c => c.FullPath));
             var entries = Directory.EnumerateFileSystemEntries(folder.FullPath)
-                .Where(filePath => !FilterViewModel.Filters.Any(filter => filePath.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
-                .Select(Path.GetFileName);
+                .Where(filePath => !FilterViewModel.Filters.Any(filter =>
+                    filePath.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0));
+
             var directoryItems = new HashSet<string>(entries);
 
             // Remove items that no longer exist
-            var itemsToRemove = currentItems.Except(directoryItems).ToList();
-            foreach (var itemName in itemsToRemove)
+            foreach (var itemPath in currentItems.Except(directoryItems))
             {
-                var itemToRemove = folder.Children.FirstOrDefault(c => c.Name == itemName);
+                var itemToRemove = folder.Children.FirstOrDefault(c => c.FullPath == itemPath);
                 if (itemToRemove != null)
                 {
                     folder.Children.Remove(itemToRemove);
+                    _pathCache.TryRemove(itemPath, out _);
+                    hasChanges = true;
                 }
             }
 
             // Add new items
-            var itemsToAdd = directoryItems.Except(currentItems);
-            foreach (var itemName in itemsToAdd)
+            foreach (var itemPath in directoryItems.Except(currentItems))
             {
-                var fullPath = Path.Combine(folder.FullPath, itemName);
-                FileSystemItem newItem;
-                if (Directory.Exists(fullPath))
+                if (_pathCache.TryGetValue(itemPath, out var existingItem))
                 {
-                    newItem = new ProjectFolder(itemName, fullPath, folder);
+                    folder.Children.Add(existingItem);
+                    hasChanges = true;
+                    continue;
+                }
+
+                var itemName = Path.GetFileName(itemPath);
+                FileSystemItem newItem;
+
+                if (Directory.Exists(itemPath))
+                {
+                    newItem = new ProjectFolder(itemName, itemPath, folder);
                     folder.Children.Add(newItem);
                     UpdateProjectStructureRecursive((ProjectFolder)newItem);
                 }
                 else
                 {
-                    newItem = new ProjectFile(itemName, fullPath, folder);
+                    newItem = new ProjectFile(itemName, itemPath, folder);
                     folder.Children.Add(newItem);
                 }
+
+                _pathCache.TryAdd(itemPath, newItem);
+                hasChanges = true;
                 ExpandToItem(newItem);
             }
 
             // Recursively update existing subfolders
-            foreach (var child in folder.Children.OfType<ProjectFolder>())
+            foreach (var child in folder.Children.OfType<ProjectFolder>().ToList())
             {
-                UpdateProjectStructureRecursive(child);
+                hasChanges |= UpdateProjectStructureRecursive(child);
             }
 
-            // Sort children
-            var sortedChildren = folder.Children.OrderBy(c => c is ProjectFile).ThenBy(c => c.Name).ToList();
-            folder.Children.Clear();
-            foreach (var child in sortedChildren)
+            // Sort children only if there were changes
+            if (hasChanges)
             {
-                folder.Children.Add(child);
+                var sortedChildren = folder.Children
+                    .OrderBy(c => c is ProjectFile)
+                    .ThenBy(c => c.Name)
+                    .ToList();
+
+                folder.Children.Clear();
+                foreach (var child in sortedChildren)
+                {
+                    folder.Children.Add(child);
+                }
             }
+
+            return hasChanges;
         }
-
         private void ExpandToItem(FileSystemItem item)
         {
             var parent = item.Parent as ProjectFolder;
