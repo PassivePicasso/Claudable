@@ -1,3 +1,9 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
+
 namespace Claudable.Utilities;
 
 public class Debouncer : IDisposable
@@ -6,11 +12,13 @@ public class Debouncer : IDisposable
     private readonly int _milliseconds;
     private CancellationTokenSource _cancellationTokenSource;
     private readonly object _lockObject = new object();
+    private readonly Dispatcher _dispatcher;
 
     public Debouncer(Action action, int milliseconds = 1000)
     {
         _action = action ?? throw new ArgumentNullException(nameof(action));
         _milliseconds = milliseconds;
+        _dispatcher = Application.Current.Dispatcher;
     }
 
     public void Debounce()
@@ -25,7 +33,7 @@ public class Debouncer : IDisposable
             {
                 if (!task.IsCanceled)
                 {
-                    _action();
+                    _dispatcher.Invoke(() => _action());
                 }
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }

@@ -5,7 +5,6 @@ using Microsoft.Web.WebView2.Wpf;
 using Newtonsoft.Json;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Windows;
 
 namespace Claudable
 {
@@ -22,6 +21,7 @@ namespace Claudable
         private string _activeOrganizationUuid;
         private string _activeProjectUuid;
         private readonly Debouncer _reloadDebouncer;
+        private readonly Debouncer _fetchDocsDebouncer;
 
         public string LastVisitedUrl => _lastVisitedUrl;
         public string CurrentProjectUrl => _currentProjectUrl;
@@ -36,7 +36,8 @@ namespace Claudable
             if (Instance != null)
                 throw new InvalidOperationException("Cannot instantiate more than 1 WebViewManager");
             Instance = this;
-            _reloadDebouncer = new Debouncer(() => Application.Current.Dispatcher.Invoke(_webView.Reload));
+            _reloadDebouncer = new Debouncer(_webView.Reload, 1500);
+            _fetchDocsDebouncer = new Debouncer(() => _ = FetchProjectDocs(), 100);
         }
 
         public async Task InitializeAsync()
@@ -106,6 +107,7 @@ namespace Claudable
                 {
                     artifact.ProjectUuid = _activeProjectUuid;
                     _reloadDebouncer.Debounce();
+                    _fetchDocsDebouncer.Debounce();
                     return artifact;
                 }
 
@@ -126,10 +128,9 @@ namespace Claudable
             }
 
             string deleteUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{artifact.ProjectUuid}/docs/{artifact.Uuid}";
-            string docsUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{artifact.ProjectUuid}/docs";
 
             string script = @"
-                async function deleteArtifactAndFetchDocs(deleteUrl, docsUrl) {
+                async function deleteArtifact(deleteUrl) {
                     try {
                         const deleteResponse = await fetch(deleteUrl, {
                             method: 'DELETE',
@@ -148,8 +149,40 @@ namespace Claudable
                         if (!deleteResponse.ok) {
                             throw new Error(`Delete HTTP error! status: ${deleteResponse.status}`);
                         }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        throw error;
+                    }
+                }
+                deleteArtifact('" + deleteUrl + @"');
+            ";
 
-                        const docsResponse = await fetch(docsUrl, {
+            try
+            {
+                await _webView.CoreWebView2.ExecuteScriptAsync(script);
+                _reloadDebouncer.Debounce();
+                _fetchDocsDebouncer.Debounce();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error in delete operation: {e.Message}");
+                throw;
+            }
+        }
+
+        private async Task FetchProjectDocs()
+        {
+            if (string.IsNullOrEmpty(_activeOrganizationUuid) || string.IsNullOrEmpty(_activeProjectUuid))
+            {
+                return;
+            }
+
+            string docsUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
+
+            string script = @"
+                async function fetchDocs(docsUrl) {
+                    try {
+                        const response = await fetch(docsUrl, {
                             method: 'GET',
                             headers: {
                                 'authority': 'api.claude.ai',
@@ -163,25 +196,26 @@ namespace Claudable
                             credentials: 'include'
                         });
 
-                        if (!docsResponse.ok) {
-                            throw new Error(`Docs HTTP error! status: ${docsResponse.status}`);
+                        if (!response.ok) {
+                            throw new Error(`Docs HTTP error! status: ${response.status}`);
                         }
+
+                        return await response.json();
                     } catch (error) {
                         console.error('Error:', error);
                         throw error;
                     }
                 }
-                deleteArtifactAndFetchDocs('" + deleteUrl + @"', '" + docsUrl + @"');
+                fetchDocs('" + docsUrl + @"');
             ";
 
             try
             {
                 await _webView.CoreWebView2.ExecuteScriptAsync(script);
-                _reloadDebouncer.Debounce();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error in delete operation: {e.Message}");
+                Console.WriteLine($"Error fetching docs: {e.Message}");
                 throw;
             }
         }
@@ -278,6 +312,7 @@ namespace Claudable
         public void Dispose()
         {
             _reloadDebouncer?.Dispose();
+            _fetchDocsDebouncer?.Dispose();
         }
     }
 }
