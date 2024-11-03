@@ -21,6 +21,7 @@ public class Debouncer : IDisposable
         _dispatcher = Application.Current.Dispatcher;
     }
 
+
     public void Debounce()
     {
         lock (_lockObject)

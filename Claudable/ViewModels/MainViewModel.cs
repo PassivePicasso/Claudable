@@ -29,7 +29,17 @@ namespace Claudable.ViewModels
         private readonly ConcurrentDictionary<string, FileSystemItem> _pathCache = new();
         private readonly object _updateLock = new object();
         private bool _isUpdating;
+        private bool _isRefreshing;
 
+        public bool IsRefreshing
+        {
+            get => _isRefreshing;
+            set
+            {
+                _isRefreshing = value;
+                OnPropertyChanged();
+            }
+        }
         public ArtifactManager ArtifactManager
         {
             get => _artifactManager;
@@ -129,6 +139,7 @@ namespace Claudable.ViewModels
         public ICommand UpdateArtifactStatusCommand { get; private set; }
         public ICommand DropSvgArtifactCommand { get; private set; }
         public ICommand DoubleClickTrackedArtifactCommand { get; private set; }
+        public ICommand RefreshArtifactsCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -143,6 +154,7 @@ namespace Claudable.ViewModels
             UpdateArtifactStatusCommand = new RelayCommand(UpdateArtifactStatus);
             DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
             DoubleClickTrackedArtifactCommand = new RelayCommand<ProjectFile>(OnDoubleClickTrackedArtifact);
+            RefreshArtifactsCommand = new RelayCommand<ProjectFolder>(async pf => await RefreshFolderArtifacts(pf), pf => pf is ProjectFolder);
         }
 
         private void OnDoubleClickTrackedArtifact(ProjectFile projectFile)
@@ -362,6 +374,53 @@ namespace Claudable.ViewModels
             }
         }
 
+        public async Task RefreshFolderArtifacts(ProjectFolder folder)
+        {
+            if (IsRefreshing || folder == null)
+                return;
+
+            IsRefreshing = true;
+            folder.RefreshInProgress = true;
+
+            try
+            {
+                var outdatedFiles = folder.GetAllProjectFiles()
+                    .Where(file => file.IsTrackedAsArtifact && file.IsLocalNewer)
+                    .ToList();
+
+                int totalFiles = outdatedFiles.Count;
+                int processedFiles = 0;
+
+                foreach (var file in outdatedFiles)
+                {
+                    try
+                    {
+                        file.UntrackArtifact();
+                        var content = await File.ReadAllTextAsync(file.FullPath);
+                        var artifact = await WebViewManager.CreateArtifact(file.Name, content);
+
+                        if (artifact != null)
+                            file.UpdateFromArtifact(artifact);
+
+                        processedFiles++;
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error refreshing artifact for {file.Name}: {ex.Message}");
+                    }
+                }
+
+                // Update UI after all files are processed
+                ApplyFilters();
+                UpdateArtifactStatus();
+            }
+            finally
+            {
+                IsRefreshing = false;
+                folder.RefreshInProgress = false;
+                folder.NotifyFileStatusChanged();
+            }
+        }
         private void UpdateArtifactStatus()
         {
             if (RootProjectFolder != null && ArtifactManager.Artifacts != null)

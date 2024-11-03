@@ -13,6 +13,7 @@ namespace Claudable
         public static WebViewManager Instance { get; private set; }
         private string _baseUrl = "https://api.claude.ai";
 
+        private readonly Regex ProjectUrl = new Regex(@"^https:\/\/claude\.ai\/project\/(?<projectId>.*?)$");
         private readonly Regex DataCollector = new Regex(@"^https://api\.claude\.ai/api/organizations/(?<organizationId>.*?)/projects/(?<projectId>.*?)/docs$");
         private readonly WebView2 _webView;
         private string _lastVisitedUrl;
@@ -36,9 +37,14 @@ namespace Claudable
             if (Instance != null)
                 throw new InvalidOperationException("Cannot instantiate more than 1 WebViewManager");
             Instance = this;
-            _reloadDebouncer = new Debouncer(_webView.Reload, 1500);
-            _fetchDocsDebouncer = new Debouncer(() => _ = FetchProjectDocs(), 100);
+            _reloadDebouncer = new Debouncer(() =>
+            {
+                if (!ProjectUrl.IsMatch(LastVisitedUrl)) return;
+                _webView.Reload();
+            }, 1500);
+            _fetchDocsDebouncer = new Debouncer(() => _ = FetchProjectDocs(), 250);
         }
+
 
         public async Task InitializeAsync()
         {
@@ -103,11 +109,11 @@ namespace Claudable
                 string resultJson = await _webView.CoreWebView2.ExecuteScriptAsync(script);
                 var artifact = JsonConvert.DeserializeObject<ArtifactViewModel>(resultJson);
 
+                _reloadDebouncer.Debounce();
+                _fetchDocsDebouncer.Debounce();
                 if (artifact != null)
                 {
                     artifact.ProjectUuid = _activeProjectUuid;
-                    _reloadDebouncer.Debounce();
-                    _fetchDocsDebouncer.Debounce();
                     return artifact;
                 }
 
@@ -255,6 +261,7 @@ namespace Claudable
         {
             var url = args.Request.Uri;
             if (!url.Contains("claude")) return;
+            if (args.Request.Method != "GET") return;
             var uri = new Uri(url);
             var schemeHostPath = $"https://{uri.Host}{uri.AbsolutePath}";
             switch (uri)

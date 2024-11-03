@@ -1,5 +1,4 @@
 ﻿using Claudable.Models;
-using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -103,6 +102,8 @@ namespace Claudable.ViewModels
                 : ArtifactLastModified.ToUniversalTime();
 
             IsLocalNewer = localUtc > artifactUtc;
+            if (Parent is ProjectFolder folder)
+                folder.NotifyFileStatusChanged();
         }
 
         public void UpdateFromArtifact(ArtifactViewModel artifact)

@@ -1,9 +1,10 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:vm="clr-namespace:Claudable.ViewModels"
-                    xmlns:models="clr-namespace:Claudable.Models"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:claudable="clr-namespace:Claudable"
                     xmlns:controls="clr-namespace:Claudable.Controls"
                     xmlns:converters="clr-namespace:Claudable.Converters"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:models="clr-namespace:Claudable.Models"
+                    xmlns:vm="clr-namespace:Claudable.ViewModels">
 
     <!-- Converters -->
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -77,7 +78,7 @@
             </Trigger>
         </Style.Triggers>
     </Style>
-    
+
     <!-- ToggleButton Style -->
     <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource ClaudeBaseStyle}">
         <Setter Property="Background" Value="{StaticResource ClaudePrimaryBrush}"/>
@@ -204,6 +205,7 @@
         <Setter Property="CornerRadius" Value="0,12,12,0"/>
     </Style>
 
+    <!-- Small Button Style -->
     <Style x:Key="SmallButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Height" Value="20"/>
         <Setter Property="Padding" Value="5,-2,5,2"/>
@@ -235,7 +237,8 @@
             </Trigger>
         </Style.Triggers>
     </Style>
-    
+
+    <!-- Download Item Template -->
     <DataTemplate DataType="{x:Type models:DownloadItem}">
         <Border BorderBrush="{StaticResource ClaudeBorderBrush}" BorderThickness="0,0,0,1" Padding="10,5">
             <Grid>
@@ -290,6 +293,7 @@
         </Border>
     </DataTemplate>
 
+    <!-- Artifact Template -->
     <DataTemplate DataType="{x:Type vm:ArtifactViewModel}" >
         <Grid>
             <Grid.ColumnDefinitions>
@@ -329,10 +333,34 @@
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
             </Style>
         </HierarchicalDataTemplate.ItemContainerStyle>
-        <StackPanel Orientation="Horizontal" MinHeight="20">
-            <controls:FileSystemIcon Path="{Binding FullPath}" Width="16" Height="16" Margin="0,0,5,0"/>
-            <TextBlock Text="{Binding Name}" Foreground="{StaticResource ClaudeTextBrush}"/>
-        </StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <controls:FileSystemIcon Grid.Column="1" Path="{Binding FullPath}" Width="16" Height="16" Margin="0,0,5,0"/>
+            <TextBlock Grid.Column="2" Text="{Binding Name}" Foreground="{StaticResource ClaudeTextBrush}"/>
+            <!-- Refresh Button -->
+            <Button Grid.Column="0" Background="PaleGoldenrod"
+                    Style="{StaticResource SmallButtonStyle}"
+                    Command="{Binding Path=RefreshArtifactsCommand, Source={x:Static claudable:MainWindow.MainViewModel}}"
+                    CommandParameter="{Binding}"
+                    Width="14"
+                    Height="14"
+                    BorderThickness="0"
+                    Padding="0,-4,0,0"
+                    Margin="0,0,0,0"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    ToolTip="Refresh outdated artifacts in this folder"
+                    Visibility="{Binding HasOutdatedFiles, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    >
+                <TextBlock Text="⟳" Foreground="Black"/>
+            </Button>
+        </Grid>
     </HierarchicalDataTemplate>
 
     <!-- Project File Item Template -->
@@ -366,7 +394,7 @@
                 <ColumnDefinition Width="*" MinWidth="200" SharedSizeGroup="FileName"/>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="TrackButton"/>
             </Grid.ColumnDefinitions>
-            
+
             <controls:FileSystemIcon Grid.Column="2" Path="{Binding FullPath}" Width="16" Height="16"/>
 
             <TextBlock Grid.Column="3" Text="{Binding Name}" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>

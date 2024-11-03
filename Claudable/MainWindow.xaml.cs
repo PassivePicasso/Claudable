@@ -14,7 +14,7 @@ namespace Claudable
 {
     public partial class MainWindow : Window
     {
-        private readonly MainViewModel _viewModel;
+        public static readonly MainViewModel MainViewModel = new MainViewModel();
         private readonly WebViewManager _webViewManager;
         private readonly WindowStateManager _windowStateManager;
         private readonly IDialogService _dialogService;
@@ -26,15 +26,14 @@ namespace Claudable
         public MainWindow()
         {
             InitializeComponent();
-            _viewModel = new MainViewModel();
-            DataContext = _viewModel;
+            DataContext = MainViewModel;
 
             _dialogService = new DialogService();
             _webViewManager = new WebViewManager(ClaudeWebView, "https://claude.ai");
             _webViewManager.DocsReceived += _webViewManager_DocsReceived;
             _webViewManager.ProjectChanged += _webViewManager_ProjectChanged;
-            _windowStateManager = new WindowStateManager(this, _viewModel, _webViewManager);
-            _viewModel.WebViewManager = _webViewManager;
+            _windowStateManager = new WindowStateManager(this, MainViewModel, _webViewManager);
+            MainViewModel.WebViewManager = _webViewManager;
 
             MouseHook.MouseMoved += OnMouseMoved;
             MouseHook.SetHook();
@@ -55,26 +54,26 @@ namespace Claudable
         private void _webViewManager_DocsReceived(object? sender, string e)
         {
             if (string.IsNullOrEmpty(e)) return;
-            _viewModel.ArtifactManager.LoadArtifacts(e);
+            MainViewModel.ArtifactManager.LoadArtifacts(e);
         }
         private void _webViewManager_ProjectChanged(object? sender, string e)
         {
-            _viewModel.HandleProjectChanged(e);
+            MainViewModel.HandleProjectChanged(e);
         }
 
         private async void InitializeAsync()
         {
             await WebViewManager.InitializeAsync();
             _windowStateManager.LoadState();
-            _viewModel.LoadStateCommand.Execute(null);
+            MainViewModel.LoadStateCommand.Execute(null);
 
-            if (_viewModel.IsPanelsSwapped)
+            if (MainViewModel.IsPanelsSwapped)
             {
                 SwapPanels(false);
             }
 
             // Initialize DownloadManager with WebView2
-            _viewModel.DownloadManager.Initialize(ClaudeWebView.CoreWebView2);
+            MainViewModel.DownloadManager.Initialize(ClaudeWebView.CoreWebView2);
         }
 
         private void SwapPanels_Click(object sender, RoutedEventArgs e)
@@ -89,7 +88,7 @@ namespace Claudable
 
             if (updateViewModel)
             {
-                _viewModel.IsPanelsSwapped = !_viewModel.IsPanelsSwapped;
+                MainViewModel.IsPanelsSwapped = !MainViewModel.IsPanelsSwapped;
             }
 
             _windowStateManager.SaveState();
@@ -180,7 +179,7 @@ namespace Claudable
         {
             base.OnClosing(e);
             _windowStateManager.SaveState();
-            _viewModel.SaveStateCommand.Execute(null);
+            MainViewModel.SaveStateCommand.Execute(null);
         }
 
         #region Drag and Drop
@@ -236,7 +235,7 @@ namespace Claudable
                     {
                         string fileType = Keyboard.Modifiers == ModifierKeys.Control ? "ico" : "png";
                         var dropInfo = new Tuple<SvgArtifactViewModel, FileSystemItem, string>(svgArtifact, targetItem, fileType);
-                        _viewModel.DropSvgArtifactCommand.Execute(dropInfo);
+                        MainViewModel.DropSvgArtifactCommand.Execute(dropInfo);
                     }
                 }
             }
@@ -253,7 +252,7 @@ namespace Claudable
 
                 if (targetItem == null)
                 {
-                    targetItem = _viewModel.RootProjectFolder;
+                    targetItem = MainViewModel.RootProjectFolder;
                 }
 
                 ProjectFolder targetFolder = targetItem as ProjectFolder;
@@ -270,7 +269,7 @@ namespace Claudable
                     try
                     {
                         File.Move(sourceFilePath, destinationFilePath);
-                        _viewModel.DownloadManager.Downloads.Remove(downloadItem);
+                        MainViewModel.DownloadManager.Downloads.Remove(downloadItem);
 
                         // Add the new file to the target folder's children
                         ProjectFile newFile = new ProjectFile(Path.GetFileName(destinationFilePath), destinationFilePath);
@@ -378,8 +377,8 @@ namespace Claudable
         }
         private void FilterModeButton_Click(object sender, RoutedEventArgs e)
         {
-            _viewModel.CurrentFilterMode = (FilterMode)(((int)_viewModel.CurrentFilterMode + 1) % 3);
-            ((Button)sender).Content = _viewModel.CurrentFilterMode.ToString();
+            MainViewModel.CurrentFilterMode = (FilterMode)(((int)MainViewModel.CurrentFilterMode + 1) % 3);
+            ((Button)sender).Content = MainViewModel.CurrentFilterMode.ToString();
             ProjectStructureTreeView?.Items.Refresh();
         }
     }
