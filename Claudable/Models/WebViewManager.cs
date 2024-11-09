@@ -14,21 +14,25 @@ namespace Claudable
         private string _baseUrl = "https://api.claude.ai";
 
         private readonly Regex ProjectUrl = new Regex(@"^https:\/\/claude\.ai\/project\/(?<projectId>.*?)$");
-        private readonly Regex DataCollector = new Regex(@"^https://api\.claude\.ai/api/organizations/(?<organizationId>.*?)/projects/(?<projectId>.*?)/docs$");
+        private readonly Regex DocsUrl = new Regex(@".*?\/api\/organizations\/(?<organizationId>.*?)\/projects\/(?<projectId>.*?)\/docs(?:\/(?<artifactId>.*?))?$");
+        private readonly Regex DataCollector = new Regex(@".*?/api/organizations/(?<organizationId>.*?)/projects/(?<projectId>.+?)/.*");
         private readonly WebView2 _webView;
         private string _lastVisitedUrl;
         private string _currentProjectUrl;
         private string _lastDocsResponse;
-        private string _activeOrganizationUuid;
-        private string _activeProjectUuid;
         private readonly Debouncer _reloadDebouncer;
         private readonly Debouncer _fetchDocsDebouncer;
+
+
+        private string _activeProjectUuid;
+        private string _activeOrganizationUuid;
 
         public string LastVisitedUrl => _lastVisitedUrl;
         public string CurrentProjectUrl => _currentProjectUrl;
 
         public event EventHandler<string> DocsReceived;
         public event EventHandler<string> ProjectChanged;
+        public event EventHandler<string> ArtifactDeleted;
 
         public WebViewManager(WebView2 webView, string initialUrl)
         {
@@ -60,11 +64,6 @@ namespace Claudable
 
         public async Task<ArtifactViewModel> CreateArtifact(string fileName, string content)
         {
-            if (string.IsNullOrEmpty(_activeOrganizationUuid) || string.IsNullOrEmpty(_activeProjectUuid))
-            {
-                throw new InvalidOperationException("Active organization or project UUID is not set.");
-            }
-
             string url = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
 
             var payload = new
@@ -73,36 +72,7 @@ namespace Claudable
                 content = content
             };
 
-            string script = $@"
-                async function createArtifact(url, payload) {{
-                    try {{
-                        const response = await fetch(url, {{
-                            method: 'POST',
-                            headers: {{
-                                'authority': 'api.claude.ai',
-                                'origin': 'https://claude.ai',
-                                'accept': '*/*',
-                                'accept-language': 'en-US,en;q=0.9',
-                                'anthropic-client-sha': '',
-                                'anthropic-client-version': '',
-                                'content-type': 'application/json'
-                            }},
-                            credentials: 'include',
-                            body: JSON.stringify(payload)
-                        }});
-
-                        if (!response.ok) {{
-                            throw new Error(`HTTP error! status: ${{response.status}}`);
-                        }}
-
-                        return await response.json();
-                    }} catch (error) {{
-                        console.error('Error:', error);
-                        throw error;
-                    }}
-                }}
-                createArtifact('{url}', {JsonConvert.SerializeObject(payload)});
-            ";
+            string script = RESTCall("TrackArtifact", "POST", url, payload);
 
             try
             {
@@ -128,44 +98,15 @@ namespace Claudable
 
         public async Task DeleteArtifact(ArtifactViewModel artifact)
         {
-            if (string.IsNullOrEmpty(_activeOrganizationUuid))
-            {
-                throw new InvalidOperationException("Active organization UUID is not set.");
-            }
-
             string deleteUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{artifact.ProjectUuid}/docs/{artifact.Uuid}";
 
-            string script = @"
-                async function deleteArtifact(deleteUrl) {
-                    try {
-                        const deleteResponse = await fetch(deleteUrl, {
-                            method: 'DELETE',
-                            headers: {
-                                'authority': 'api.claude.ai',
-                                'origin': 'https://claude.ai',
-                                'accept': '*/*',
-                                'accept-language': 'en-US,en;q=0.9',
-                                'anthropic-client-sha': '',
-                                'anthropic-client-version': '',
-                                'content-type': 'application/json'
-                            },
-                            credentials: 'include'
-                        });
 
-                        if (!deleteResponse.ok) {
-                            throw new Error(`Delete HTTP error! status: ${deleteResponse.status}`);
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        throw error;
-                    }
-                }
-                deleteArtifact('" + deleteUrl + @"');
-            ";
+            string script = RESTCall("UntrackArtifact", "DELETE", deleteUrl);
 
             try
             {
-                await _webView.CoreWebView2.ExecuteScriptAsync(script);
+                var result = await _webView.CoreWebView2.ExecuteScriptAsync(script);
+                Console.Write(result);
                 _reloadDebouncer.Debounce();
                 _fetchDocsDebouncer.Debounce();
             }
@@ -178,42 +119,9 @@ namespace Claudable
 
         private async Task FetchProjectDocs()
         {
-            if (string.IsNullOrEmpty(_activeOrganizationUuid) || string.IsNullOrEmpty(_activeProjectUuid))
-            {
-                return;
-            }
-
             string docsUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
 
-            string script = @"
-                async function fetchDocs(docsUrl) {
-                    try {
-                        const response = await fetch(docsUrl, {
-                            method: 'GET',
-                            headers: {
-                                'authority': 'api.claude.ai',
-                                'origin': 'https://claude.ai',
-                                'accept': '*/*',
-                                'accept-language': 'en-US,en;q=0.9',
-                                'anthropic-client-sha': '',
-                                'anthropic-client-version': '',
-                                'content-type': 'application/json'
-                            },
-                            credentials: 'include'
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`Docs HTTP error! status: ${response.status}`);
-                        }
-
-                        return await response.json();
-                    } catch (error) {
-                        console.error('Error:', error);
-                        throw error;
-                    }
-                }
-                fetchDocs('" + docsUrl + @"');
-            ";
+            string script = RESTCall("fetchDocs", "GET", docsUrl);
 
             try
             {
@@ -224,6 +132,45 @@ namespace Claudable
                 Console.WriteLine($"Error fetching docs: {e.Message}");
                 throw;
             }
+        }
+
+        private string RESTCall(string functionName, string method, string url, object payload = null)
+        {
+            var includePayload = payload != null;
+            string script = $@"
+                async function {functionName}(url{(includePayload ? ", payload" : "")}) {{
+                    try {{
+                        const response = await fetch(url, {{
+                            method: '{method}',
+                            headers: {{
+                                'authority': 'api.claude.ai',
+                                'origin': 'https://claude.ai',
+                                'accept': '*/*',
+                                'accept-language': 'en-US,en;q=0.9',
+                                'anthropic-client-sha': '',
+                                'anthropic-client-version': '',
+                                'content-type': 'application/json'
+                            }},
+                            credentials: 'include'{(includePayload
+                            ? @", 
+                            body: JSON.stringify(payload)"
+                            : "")}
+                        }});
+
+                        if (!response.ok) {{
+                            throw new Error(`HTTP error! status: ${{response.status}}`);
+                        }}
+
+                        return await response.json();
+                    }} catch (error) {{
+                        console.error('Error:', error);
+                        throw error;
+                    }}
+                }}
+                {functionName}('{url}'{(includePayload ? $", {JsonConvert.SerializeObject(payload)}" : "")});
+            ";
+            return script;
+
         }
 
         public void Navigate(string url)
@@ -249,7 +196,7 @@ namespace Claudable
         private void SetupWebViewEventHandlers()
         {
             _webView.SourceChanged += WebView_SourceChanged;
-            _webView.CoreWebView2.WebResourceResponseReceived += ProcessDocsResponse;
+            _webView.CoreWebView2.WebResourceResponseReceived += ProcessWebViewResponse;
             _webView.CoreWebView2.NavigationCompleted += CheckForProjectChange;
             _webView.CoreWebView2.FrameNavigationCompleted += CheckForProjectChange;
             _webView.CoreWebView2.HistoryChanged += CoreWebView2_HistoryChanged;
@@ -257,27 +204,26 @@ namespace Claudable
 
         private void CoreWebView2_HistoryChanged(object? sender, object e) => CheckForProjectChange();
 
-        private async void ProcessDocsResponse(object? sender, CoreWebView2WebResourceResponseReceivedEventArgs args)
+        private async void ProcessWebViewResponse(object? sender, CoreWebView2WebResourceResponseReceivedEventArgs args)
         {
             var url = args.Request.Uri;
             if (!url.Contains("claude")) return;
-            if (args.Request.Method != "GET") return;
+
+            var match = DataCollector.Match(url);
+            if (match.Success)
+            {
+                _activeOrganizationUuid = match.Groups["organizationId"].Value;
+                _activeProjectUuid = match.Groups["projectId"].Value;
+            }
+
             var uri = new Uri(url);
             var schemeHostPath = $"https://{uri.Host}{uri.AbsolutePath}";
             switch (uri)
             {
-                case var _ when url.EndsWith("docs"):
+                case var _ when DocsUrl.IsMatch(url) && args.Request.Method == "GET":
                     {
                         try
                         {
-                            var path = args.Request.Uri;
-                            var match = DataCollector.Match(path);
-                            if (match.Success)
-                            {
-                                _activeOrganizationUuid = match.Groups["organizationId"].Value;
-                                _activeProjectUuid = match.Groups["projectId"].Value;
-                            }
-
                             var response = args.Response;
                             var stream = await response.GetContentAsync();
                             using var reader = new StreamReader(stream);
@@ -288,6 +234,13 @@ namespace Claudable
                         {
                             Console.WriteLine(ex.ToString());
                         }
+                    }
+                    break;
+                case var _ when DocsUrl.IsMatch(url) && args.Request.Method == "DELETE":
+                    {
+                        var docMatch = DocsUrl.Match(url);
+                        var artifactId = docMatch.Groups["artifactId"].Value;
+                        ArtifactDeleted?.Invoke(this, artifactId);
                     }
                     break;
             }

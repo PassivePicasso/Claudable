@@ -32,6 +32,8 @@ namespace Claudable
             _webViewManager = new WebViewManager(ClaudeWebView, "https://claude.ai");
             _webViewManager.DocsReceived += _webViewManager_DocsReceived;
             _webViewManager.ProjectChanged += _webViewManager_ProjectChanged;
+            _webViewManager.ArtifactDeleted += _webViewManager_ArtifactDeleted;
+            
             _windowStateManager = new WindowStateManager(this, MainViewModel, _webViewManager);
             MainViewModel.WebViewManager = _webViewManager;
 
@@ -51,6 +53,17 @@ namespace Claudable
             dragAdorner.UpdatePosition(cursorPosition);
         }
 
+        private void _webViewManager_ArtifactDeleted(object? sender, string e)
+        {
+            if (string.IsNullOrEmpty(e)) return;
+            var matched = MainViewModel.ArtifactManager.Artifacts.FirstOrDefault(a => a.Uuid == e);
+            if (matched == null) return;
+            var projectFile = MainViewModel.ArtifactManager.RootProjectFolder.GetAllProjectFiles().FirstOrDefault(pf => pf.AssociatedArtifact == matched);
+            if (projectFile == null) return;
+            projectFile.AssociatedArtifact = null;
+            projectFile.ArtifactLastModified = DateTime.MinValue;
+        }
+
         private void _webViewManager_DocsReceived(object? sender, string e)
         {
             if (string.IsNullOrEmpty(e)) return;
@@ -58,6 +71,7 @@ namespace Claudable
         }
         private void _webViewManager_ProjectChanged(object? sender, string e)
         {
+            if (string.IsNullOrEmpty(e)) return;
             MainViewModel.HandleProjectChanged(e);
         }
 
