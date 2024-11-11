@@ -1,6 +1,5 @@
 using Claudable.Models;
 using System.Collections.ObjectModel;
-using System.Windows.Input;
 
 namespace Claudable.ViewModels
 {
