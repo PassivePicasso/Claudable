@@ -201,13 +201,17 @@
 
                                     <TextBlock Text="Project Structure" FontWeight="Bold" Margin="0,0,0,5"/>
 
-
-                                    <TreeView x:Name="ProjectStructureTreeView" Grid.Row="1" ItemsSource="{Binding RootProjectFolder.FilteredChildren}"
-                                                  AllowDrop="True"
-                                                  Drop="ProjectFolder_Drop"
-                                                  PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
-                                                  MouseMove="TreeView_MouseMove"
-                                                  >
+                                    <TreeView x:Name="ProjectStructureTreeView"
+                                              Grid.Row="1"
+                                              ItemsSource="{Binding RootProjectFolder.FilteredChildren}"
+                                              VirtualizingStackPanel.IsVirtualizing="True"
+                                              VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                              ScrollViewer.IsDeferredScrollingEnabled="True"
+                                              ScrollViewer.CanContentScroll="True"
+                                              AllowDrop="True"
+                                              Drop="ProjectFolder_Drop"
+                                              PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
+                                              MouseMove="TreeView_MouseMove">
                                         <TreeView.ItemContainerStyle>
                                             <Style TargetType="{x:Type TreeViewItem}">
                                                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
@@ -215,6 +219,8 @@
                                                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                                                 <Setter Property="FontWeight" Value="Normal" />
                                                 <Setter Property="AllowDrop" Value="True" />
+                                                <Setter Property="VirtualizingStackPanel.IsVirtualizing" Value="True" />
+                                                <Setter Property="VirtualizingStackPanel.VirtualizationMode" Value="Recycling" />
                                                 <Style.Triggers>
                                                     <Trigger Property="IsSelected" Value="True">
                                                         <Setter Property="FontWeight" Value="Bold" />
