@@ -1,3 +1,4 @@
+using Claudable.Extensions;
 using Claudable.Models;
 using Claudable.Services;
 using Claudable.Utilities;
@@ -206,11 +207,20 @@ namespace Claudable.ViewModels
 
         private bool UpdateProjectStructureRecursive(ProjectFolder folder)
         {
-            bool hasChanges = false;
-            var currentItems = new HashSet<string>(folder.Children.Select(c => c.FullPath));
+            bool ShouldExcludeEntry(Filter filter, string filePath)
+            {
+                var filterValue = filter.ShouldPrependProjectFolder
+                    ? $"{RootProjectFolder.FullPath}{filter.Value}"
+                    : filter.Value;
+
+                return filePath.IndexOf(filterValue, StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            bool hasChanges   = false;
+            var  currentItems = new HashSet<string>(folder.Children.Select(c => c.FullPath));
+
             var entries = Directory.EnumerateFileSystemEntries(folder.FullPath)
-                .Where(filePath => !FilterViewModel.Filters.Any(filter =>
-                    filePath.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0));
+                                   .Where(filePath => !FilterViewModel.Filters.Any(filter => ShouldExcludeEntry(filter, filePath)));
 
             var directoryItems = new HashSet<string>(entries);
 
@@ -253,7 +263,8 @@ namespace Claudable.ViewModels
 
                 _pathCache.TryAdd(itemPath, newItem);
                 hasChanges = true;
-                ExpandToItem(newItem);
+                
+                //ExpandToItem(newItem);
             }
 
             // Recursively update existing subfolders
@@ -512,9 +523,10 @@ namespace Claudable.ViewModels
             {
                 IsPanelsSwapped = IsPanelsSwapped,
                 SelectedTabIndex = SelectedTabIndex,
-                Filters = FilterViewModel.Filters.ToArray(),
+                Filters = FilterViewModel.Filters.Select(f => f.Value).ToArray(),
                 ProjectRootPath = RootProjectFolder?.FullPath,
-                CurrentFilterMode = CurrentFilterMode
+                CurrentFilterMode = CurrentFilterMode,
+                ExpandedFolders = RootProjectFolder?.GetExpandedPaths() ?? Array.Empty<string>(),
             };
 
             string json = JsonConvert.SerializeObject(state);
@@ -536,13 +548,17 @@ namespace Claudable.ViewModels
 
                 IsPanelsSwapped = state.IsPanelsSwapped;
                 SelectedTabIndex = state.SelectedTabIndex;
-                FilterViewModel.Filters = new ObservableCollection<string>(state.Filters ?? Array.Empty<string>());
+                FilterViewModel.Filters = new ObservableCollection<Filter>(state.Filters.Any() ? state.Filters.Select(f => new Filter(f)) : Array.Empty<Filter>());
                 CurrentFilterMode = state.CurrentFilterMode;
 
                 if (!string.IsNullOrEmpty(state.ProjectRootPath))
                 {
                     LoadProjectStructure(state.ProjectRootPath);
+
+                    if (RootProjectFolder != null)
+                        RootProjectFolder.RestoreExpandedState(state.ExpandedFolders);
                 }
+
                 ApplyFilters();
                 UpdateArtifactStatus();
             }

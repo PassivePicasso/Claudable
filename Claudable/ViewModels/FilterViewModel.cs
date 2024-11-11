@@ -5,12 +5,16 @@ using System.Windows.Input;
 
 namespace Claudable.ViewModels
 {
-    public class FilterViewModel : INotifyPropertyChanged
+  using Models;
+
+  public class FilterViewModel : INotifyPropertyChanged
     {
+        public static readonly char[] FolderChar = ['/', '\\'];
+
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private ObservableCollection<string> _filters;
-        public ObservableCollection<string> Filters
+        private ObservableCollection<Filter> _filters;
+        public ObservableCollection<Filter> Filters
         {
             get => _filters;
             set
@@ -36,26 +40,30 @@ namespace Claudable.ViewModels
 
         public FilterViewModel()
         {
-            Filters = new ObservableCollection<string>();
-            AddFilterCommand = new RelayCommand(AddFilter, CanAddFilter);
-            RemoveFilterCommand = new RelayCommand<string>(RemoveFilter);
+            Filters             = new ObservableCollection<Filter>();
+            AddFilterCommand    = new RelayCommand(AddFilter, CanAddFilter);
+            RemoveFilterCommand = new RelayCommand<Filter>(RemoveFilter);
         }
 
         private bool CanAddFilter()
         {
-            return !string.IsNullOrWhiteSpace(NewFilter);
+            return !string.IsNullOrWhiteSpace(NewFilter) && !(NewFilter.Length == 1 && FolderChar.Any(fc => fc == NewFilter[0]));
         }
 
         private void AddFilter()
         {
             if (CanAddFilter())
             {
-                Filters.Add(NewFilter.Trim());
+                var filterValue = NewFilter.Trim().Replace('/', '\\');
+
+                var newFilter = new Filter(filterValue);
+
+                Filters.Add(newFilter);
                 NewFilter = string.Empty;
             }
         }
 
-        private void RemoveFilter(string filter)
+        private void RemoveFilter(Filter filter)
         {
             Filters.Remove(filter);
         }
