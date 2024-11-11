@@ -12,7 +12,6 @@
 
         public string Value { get; set; }
     
-        [JsonIgnore]
         public bool ShouldPrependProjectFolder => FilterViewModel.FolderChar.Contains(Value[0]);
     }
 }
