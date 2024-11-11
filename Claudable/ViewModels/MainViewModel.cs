@@ -1,3 +1,4 @@
+using Claudable.Extensions;
 using Claudable.Models;
 using Claudable.Services;
 using Claudable.Utilities;
@@ -7,7 +8,6 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -263,7 +263,8 @@ namespace Claudable.ViewModels
 
                 _pathCache.TryAdd(itemPath, newItem);
                 hasChanges = true;
-                ExpandToItem(newItem);
+                
+                //ExpandToItem(newItem);
             }
 
             // Recursively update existing subfolders
@@ -524,7 +525,8 @@ namespace Claudable.ViewModels
                 SelectedTabIndex = SelectedTabIndex,
                 Filters = FilterViewModel.Filters.Select(f => f.Value).ToArray(),
                 ProjectRootPath = RootProjectFolder?.FullPath,
-                CurrentFilterMode = CurrentFilterMode
+                CurrentFilterMode = CurrentFilterMode,
+                ExpandedFolders = RootProjectFolder?.GetExpandedPaths() ?? Array.Empty<string>(),
             };
 
             string json = JsonConvert.SerializeObject(state);
@@ -552,7 +554,11 @@ namespace Claudable.ViewModels
                 if (!string.IsNullOrEmpty(state.ProjectRootPath))
                 {
                     LoadProjectStructure(state.ProjectRootPath);
+
+                    if (RootProjectFolder != null)
+                        RootProjectFolder.RestoreExpandedState(state.ExpandedFolders);
                 }
+
                 ApplyFilters();
                 UpdateArtifactStatus();
             }
