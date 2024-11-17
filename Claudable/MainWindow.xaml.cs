@@ -4,6 +4,7 @@ using Claudable.Utilities;
 using Claudable.ViewModels;
 using Claudable.Windows;
 using System.ComponentModel;
+using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -45,6 +46,7 @@ namespace Claudable
                 dragAdorner.Close();
             };
 
+            Application.Current.MainWindow = this;
             InitializeAsync();
         }
 

@@ -2,6 +2,7 @@ using Claudable.Extensions;
 using Claudable.Models;
 using Claudable.Services;
 using Claudable.Utilities;
+using Claudable.Windows;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
@@ -141,6 +142,8 @@ namespace Claudable.ViewModels
         public ICommand DropSvgArtifactCommand { get; private set; }
         public ICommand DoubleClickTrackedArtifactCommand { get; private set; }
         public ICommand RefreshArtifactsCommand { get; private set; }
+        public ICommand ViewArtifactCommand { get; private set; }
+        public ICommand CompareFilesCommand { get; }
 
         public MainViewModel()
         {
@@ -156,6 +159,25 @@ namespace Claudable.ViewModels
             DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
             DoubleClickTrackedArtifactCommand = new RelayCommand<ProjectFile>(OnDoubleClickTrackedArtifact);
             RefreshArtifactsCommand = new RelayCommand<ProjectFolder>(async pf => await RefreshFolderArtifacts(pf), pf => pf is ProjectFolder);
+            ViewArtifactCommand = new RelayCommand<ArtifactViewModel>(ViewArtifact);
+            CompareFilesCommand = new RelayCommand<ProjectFile>(async pf => await DiffViewer.ShowDiffDialog(pf));
+        }
+
+        private void ViewArtifact(ArtifactViewModel artifact)
+        {
+            if (artifact == null) return;
+
+            var options = new ArtifactViewerOptions
+            {
+                Title = artifact.FileName,
+                Content = artifact.Content
+            };
+
+            var viewer = new ArtifactViewer(options)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            viewer.ShowDialog();
         }
 
         private void OnDoubleClickTrackedArtifact(ProjectFile projectFile)

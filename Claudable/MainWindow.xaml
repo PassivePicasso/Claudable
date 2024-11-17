@@ -242,6 +242,12 @@
                                                             BorderThickness="0,0,0,1" 
                                                             Padding="10,5"
                                                             Background="{Binding HasLocalFile, Converter={StaticResource BoolToColorConverter}}">
+                                                        <Border.InputBindings>
+                                                            <MouseBinding MouseAction="LeftDoubleClick" 
+                                                                         Command="{Binding DataContext.ViewArtifactCommand, 
+                                                                                   RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                         CommandParameter="{Binding}"/>
+                                                        </Border.InputBindings>
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto"/>
@@ -271,11 +277,22 @@
                                                                        Foreground="{StaticResource ClaudeTextBrush}" 
                                                                        Opacity="0.7"/>
 
+                                                            <!-- View Button -->
+                                                            <Button Grid.Row="0" Grid.Column="2"
+                                                                    Content="View"
+                                                                    Command="{Binding DataContext.ViewArtifactCommand, 
+                                                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Style="{StaticResource SmallButtonStyle}"
+                                                                    Margin="0,0,8,0"
+                                                                    VerticalAlignment="Center"/>
+                                                            
                                                             <!-- Missing File Warning -->
                                                             <TextBlock Grid.Row="0" Grid.Column="2"
                                                                        Text="⚠️ No local file"
                                                                        Foreground="#FFCC00"
-                                                                       Visibility="{Binding HasLocalFile, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                                                       Visibility="{Binding HasLocalFile,
+                                                                        Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                                                                        Margin="0,0,5,0"
                                                                        VerticalAlignment="Center"/>
                                                         </Grid>

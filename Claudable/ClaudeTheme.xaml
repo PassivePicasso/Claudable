@@ -518,11 +518,11 @@
                              CommandParameter="{Binding}"/>
             </Grid.InputBindings>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="20" />
-                <ColumnDefinition Width="*"    SharedSizeGroup="FileName"   />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="85"   SharedSizeGroup="TrackButton"/>
+                <ColumnDefinition Width="20"   />
+                <ColumnDefinition Width="*"    />
+                <ColumnDefinition Width="16"   />
+                <ColumnDefinition Width="16"   />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- File Icon -->
@@ -561,8 +561,19 @@
                            VerticalAlignment="Center"/>
             </Border>
 
-            <!-- Track/Untrack Button -->
-            <Button Grid.Column="4" 
+            <StackPanel Grid.Column="4" Orientation="Horizontal">
+                <!-- Compare Button -->
+                <Button Content="Compare"
+                        Command="{Binding DataContext.CompareFilesCommand, 
+                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}"
+                        Style="{StaticResource SmallButtonStyle}"
+                        Margin="0,0,4,0"
+                        Visibility="{Binding IsLocalNewer, 
+                                   Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                <!-- Track/Untrack Button -->
+                <Button
                     Content="Track" 
                     Command="{Binding TrackArtifactCommand}"
                     Visibility="{Binding IsTrackedAsArtifact, 
@@ -570,13 +581,14 @@
                     Style="{StaticResource SmallButtonStyle}"
                     />
 
-            <Button Grid.Column="4" 
+                <Button
                     Content="Untrack" 
                     Command="{Binding UntrackArtifactCommand}"
                     Visibility="{Binding IsTrackedAsArtifact, 
                                Converter={StaticResource BooleanToVisibilityConverter}}"
                     Style="{StaticResource SmallButtonStyle}"
                     />
+            </StackPanel>
         </Grid>
     </DataTemplate>
 

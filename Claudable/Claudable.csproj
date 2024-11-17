@@ -37,4 +37,10 @@
     <Folder Include="Converters\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Page Update="Windows\DiffViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
 </Project>
