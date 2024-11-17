@@ -87,11 +87,25 @@ namespace Claudable.ViewModels
         private void ProcessArtifact(ArtifactViewModel artifact)
         {
             artifact.CreatedAt = artifact.CreatedAt.ToLocalTime();
+            UpdateArtifactLocalFileStatus(artifact);
             AssociateArtifactWithProjectFile(artifact);
             if (IsSvgArtifact(artifact))
             {
                 UpdateOrAddSvgArtifact(artifact);
             }
+        }
+
+        private void UpdateArtifactLocalFileStatus(ArtifactViewModel artifact)
+        {
+            if (RootProjectFolder == null)
+            {
+                artifact.HasLocalFile = false;
+                return;
+            }
+
+            // Search for the file in the project structure
+            var projectFile = FindProjectFile(RootProjectFolder, artifact.FileName);
+            artifact.HasLocalFile = projectFile != null && File.Exists(projectFile.FullPath);
         }
 
         private bool IsSvgArtifact(ArtifactViewModel artifact)
@@ -163,6 +177,15 @@ namespace Claudable.ViewModels
             }
         }
 
+        public void UpdateAllArtifactsStatus()
+        {
+            if (RootProjectFolder == null) return;
+
+            foreach (var artifact in Artifacts)
+            {
+                UpdateArtifactLocalFileStatus(artifact);
+            }
+        }
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

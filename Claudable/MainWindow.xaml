@@ -225,6 +225,66 @@
                                         </ListBox>
                                     </Grid>
                                 </TabItem>
+
+                                <TabItem Header="Tracked Artifacts">
+                                    <Grid Margin="10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Text="Project Artifacts" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                                        <ListBox Grid.Row="1" ItemsSource="{Binding ArtifactManager.Artifacts}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{StaticResource ClaudeBorderBrush}" 
+                                                            BorderThickness="0,0,0,1" 
+                                                            Padding="10,5"
+                                                            Background="{Binding HasLocalFile, Converter={StaticResource BoolToColorConverter}}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+
+                                                            <!-- File Icon -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                                       Text="📄" FontSize="16" 
+                                                                       Margin="0,0,10,0"
+                                                                       VerticalAlignment="Center"/>
+
+                                                            <!-- Filename -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="1" 
+                                                                       Text="{Binding FileName}" 
+                                                                       FontWeight="Bold"/>
+
+                                                            <!-- Creation Time -->
+                                                            <TextBlock Grid.Row="1" Grid.Column="1" 
+                                                                       Text="{Binding CreatedAt, StringFormat='Created: {0:g}'}"
+                                                                       FontSize="11" 
+                                                                       Foreground="{StaticResource ClaudeTextBrush}" 
+                                                                       Opacity="0.7"/>
+
+                                                            <!-- Missing File Warning -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="2"
+                                                                       Text="⚠️ No local file"
+                                                                       Foreground="#FFCC00"
+                                                                       Visibility="{Binding HasLocalFile, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                                                       Margin="0,0,5,0"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </TabItem>
                             </TabControl>
                         </Grid>
 

@@ -193,6 +193,7 @@ namespace Claudable.ViewModels
                         if (changes)
                         {
                             UpdateArtifactStatus();
+                            ArtifactManager.UpdateAllArtifactsStatus();
                             ApplyFilters();
                             OnPropertyChanged(nameof(RootProjectFolder));
                         }
