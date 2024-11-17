@@ -69,6 +69,7 @@ namespace Claudable
 
                     // Show the context menu
                     var position = e.GetPosition(this);
+                    position = PointToScreen(position);
                     ShellContextMenuHandler.ShowContextMenu(fileSystemItem.FullPath, this, position);
                 }
             }
