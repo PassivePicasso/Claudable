@@ -66,7 +66,8 @@ namespace Claudable.ViewModels
                         ProcessArtifact(artifact);
                     }
 
-                    Artifacts = new ObservableCollection<ArtifactViewModel>(artifacts);
+                    var sortedArtifacts = artifacts.OrderBy(a => a.HasLocalFile).ThenBy(a => a.FileName);
+                    Artifacts = new ObservableCollection<ArtifactViewModel>(sortedArtifacts);
                 }
                 else
                 {
@@ -99,13 +100,12 @@ namespace Claudable.ViewModels
         {
             if (RootProjectFolder == null)
             {
-                artifact.HasLocalFile = false;
+                artifact.ProjectFile = null;
                 return;
             }
 
             // Search for the file in the project structure
-            var projectFile = FindProjectFile(RootProjectFolder, artifact.FileName);
-            artifact.HasLocalFile = projectFile != null && File.Exists(projectFile.FullPath);
+            artifact.ProjectFile = FindProjectFile(RootProjectFolder, artifact.FileName);
         }
 
         private bool IsSvgArtifact(ArtifactViewModel artifact)

@@ -11,7 +11,7 @@ namespace Claudable.ViewModels
         private string content;
         private DateTime createdAt;
         private string projectUuid;
-        private bool _hasLocalFile;
+        private ProjectFile _projectFile;
 
         [JsonProperty("file_name")]
         public string FileName
@@ -69,13 +69,17 @@ namespace Claudable.ViewModels
         }
 
         [JsonIgnore]
-        public bool HasLocalFile
+        public bool HasLocalFile => ProjectFile != null;
+
+        [JsonIgnore]
+        public ProjectFile ProjectFile
         {
-            get => _hasLocalFile;
+            get => _projectFile;
             set
             {
-                _hasLocalFile = value;
+                _projectFile = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasLocalFile));
             }
         }
 

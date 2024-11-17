@@ -143,6 +143,7 @@ namespace Claudable.ViewModels
         public ICommand DoubleClickTrackedArtifactCommand { get; private set; }
         public ICommand RefreshArtifactsCommand { get; private set; }
         public ICommand ViewArtifactCommand { get; private set; }
+        public ICommand ViewProjectFileCommand { get; private set; }
         public ICommand CompareFilesCommand { get; }
 
         public MainViewModel()
@@ -160,24 +161,30 @@ namespace Claudable.ViewModels
             DoubleClickTrackedArtifactCommand = new RelayCommand<ProjectFile>(OnDoubleClickTrackedArtifact);
             RefreshArtifactsCommand = new RelayCommand<ProjectFolder>(async pf => await RefreshFolderArtifacts(pf), pf => pf is ProjectFolder);
             ViewArtifactCommand = new RelayCommand<ArtifactViewModel>(ViewArtifact);
+            ViewProjectFileCommand = new RelayCommand<ProjectFile>(ViewProjectFile);
             CompareFilesCommand = new RelayCommand<ProjectFile>(async pf => await DiffViewer.ShowDiffDialog(pf));
         }
 
         private void ViewArtifact(ArtifactViewModel artifact)
         {
             if (artifact == null) return;
-
-            var options = new ArtifactViewerOptions
-            {
-                Title = artifact.FileName,
-                Content = artifact.Content
-            };
-
+            ShowViewer(artifact.FileName, artifact.Content);
+        }
+        private void ViewProjectFile(ProjectFile projectFile)
+        {
+            if (projectFile == null) return;
+            ShowViewer(Path.GetFileName(projectFile.FullPath), 
+                       File.ReadAllText(projectFile.FullPath));
+        }
+        private void ShowViewer(string title, string content)
+        {
+            var options = new ArtifactViewerOptions { Title = title, Content = content };
             var viewer = new ArtifactViewer(options)
             {
+                Title = $"Project File Viewer ({title})",
                 Owner = Application.Current.MainWindow
             };
-            viewer.ShowDialog();
+            viewer.Show();
         }
 
         private void OnDoubleClickTrackedArtifact(ProjectFile projectFile)
@@ -239,8 +246,8 @@ namespace Claudable.ViewModels
                 return filePath.IndexOf(filterValue, StringComparison.OrdinalIgnoreCase) >= 0;
             }
 
-            bool hasChanges   = false;
-            var  currentItems = new HashSet<string>(folder.Children.Select(c => c.FullPath));
+            bool hasChanges = false;
+            var currentItems = new HashSet<string>(folder.Children.Select(c => c.FullPath));
 
             var entries = Directory.EnumerateFileSystemEntries(folder.FullPath)
                                    .Where(filePath => !FilterViewModel.Filters.Any(filter => ShouldExcludeEntry(filter, filePath)));
@@ -286,7 +293,7 @@ namespace Claudable.ViewModels
 
                 _pathCache.TryAdd(itemPath, newItem);
                 hasChanges = true;
-                
+
                 //ExpandToItem(newItem);
             }
 

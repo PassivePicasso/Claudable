@@ -233,71 +233,9 @@
 
                                         <TextBlock Grid.Row="0" Text="Project Artifacts" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                                        <ListBox Grid.Row="1" ItemsSource="{Binding ArtifactManager.Artifacts}">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border BorderBrush="{StaticResource ClaudeBorderBrush}" 
-                                                            BorderThickness="0,0,0,1" 
-                                                            Padding="10,5"
-                                                            Background="{Binding HasLocalFile, Converter={StaticResource BoolToColorConverter}}">
-                                                        <Border.InputBindings>
-                                                            <MouseBinding MouseAction="LeftDoubleClick" 
-                                                                         Command="{Binding DataContext.ViewArtifactCommand, 
-                                                                                   RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                         CommandParameter="{Binding}"/>
-                                                        </Border.InputBindings>
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <Grid.RowDefinitions>
-                                                                <RowDefinition Height="Auto"/>
-                                                                <RowDefinition Height="Auto"/>
-                                                            </Grid.RowDefinitions>
-
-                                                            <!-- File Icon -->
-                                                            <TextBlock Grid.Row="0" Grid.Column="0" 
-                                                                       Text="📄" FontSize="16" 
-                                                                       Margin="0,0,10,0"
-                                                                       VerticalAlignment="Center"/>
-
-                                                            <!-- Filename -->
-                                                            <TextBlock Grid.Row="0" Grid.Column="1" 
-                                                                       Text="{Binding FileName}" 
-                                                                       FontWeight="Bold"/>
-
-                                                            <!-- Creation Time -->
-                                                            <TextBlock Grid.Row="1" Grid.Column="1" 
-                                                                       Text="{Binding CreatedAt, StringFormat='Created: {0:g}'}"
-                                                                       FontSize="11" 
-                                                                       Foreground="{StaticResource ClaudeTextBrush}" 
-                                                                       Opacity="0.7"/>
-
-                                                            <!-- View Button -->
-                                                            <Button Grid.Row="0" Grid.Column="2"
-                                                                    Content="View"
-                                                                    Command="{Binding DataContext.ViewArtifactCommand, 
-                                                                              RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Style="{StaticResource SmallButtonStyle}"
-                                                                    Margin="0,0,8,0"
-                                                                    VerticalAlignment="Center"/>
-                                                            
-                                                            <!-- Missing File Warning -->
-                                                            <TextBlock Grid.Row="0" Grid.Column="2"
-                                                                       Text="⚠️ No local file"
-                                                                       Foreground="#FFCC00"
-                                                                       Visibility="{Binding HasLocalFile,
-                                                                        Converter={StaticResource InverseBooleanToVisibilityConverter}}"
-                                                                       Margin="0,0,5,0"
-                                                                       VerticalAlignment="Center"/>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
+                                        <ListBox Grid.Row="1" 
+                                                 ItemsSource="{Binding ArtifactManager.Artifacts}" 
+                                                 ItemTemplate="{StaticResource TrackedArtifact}"/>
                                     </Grid>
                                 </TabItem>
                             </TabControl>
