@@ -9,14 +9,7 @@
     <StartupObject>Claudable.App</StartupObject>
     <ApplicationIcon>Images\Designer.ico</ApplicationIcon>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="NewFolder\**" />
-    <EmbeddedResource Remove="NewFolder\**" />
-    <None Remove="NewFolder\**" />
-    <Page Remove="NewFolder\**" />
-  </ItemGroup>
-
+	
   <ItemGroup>
     <None Remove="Images\Designer.png" />
     <None Remove="Images\folder.png" />
