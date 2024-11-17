@@ -124,21 +124,19 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-
-
+                                
                                 <TreeView x:Name="ProjectStructureTreeView"
-                                              Grid.Row="1"
-                                              ItemsSource="{Binding RootProjectFolder.FilteredChildren}"
-                                              VirtualizingStackPanel.IsVirtualizing="True"
-                                              VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                              ScrollViewer.IsDeferredScrollingEnabled="True"
-                                              ScrollViewer.CanContentScroll="True"
-                                              AllowDrop="True"
-                                              Drop="ProjectFolder_Drop"
-                                              PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
-                                              MouseMove="TreeView_MouseMove">
-                                </TreeView>
-
+                                          Grid.Row="1"
+                                          ItemsSource="{Binding RootProjectFolder.FilteredChildren}"
+                                          VirtualizingStackPanel.IsVirtualizing="True"
+                                          VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                          ScrollViewer.IsDeferredScrollingEnabled="True"
+                                          ScrollViewer.CanContentScroll="True"
+                                          AllowDrop="True"
+                                          Drop="ProjectFolder_Drop"
+                                          PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
+                                          PreviewMouseRightButtonDown="TreeView_PreviewMouseRightButtonDown"
+                                          MouseMove="TreeView_MouseMove"/>
                             </Grid>
 
                             <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Height="5"/>

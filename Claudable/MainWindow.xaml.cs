@@ -54,7 +54,25 @@ namespace Claudable
         {
             dragAdorner.UpdatePosition(cursorPosition);
         }
+        private void TreeView_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Find the TreeViewItem that was clicked
+            var treeViewItem = FindAncestor<TreeViewItem>((DependencyObject)e.OriginalSource);
+            if (treeViewItem != null)
+            {
+                var fileSystemItem = treeViewItem.DataContext as FileSystemItem;
+                if (fileSystemItem != null)
+                {
+                    // Select the item that was right-clicked
+                    treeViewItem.IsSelected = true;
+                    e.Handled = true;
 
+                    // Show the context menu
+                    var position = e.GetPosition(this);
+                    ShellContextMenuHandler.ShowContextMenu(fileSystemItem.FullPath, this, position);
+                }
+            }
+        }
         private void _webViewManager_ArtifactDeleted(object? sender, string e)
         {
             if (string.IsNullOrEmpty(e)) return;
