@@ -8,29 +8,17 @@
         Title="Artifact Viewer" Height="600" Width="800"
         WindowStartupLocation="CenterOwner">
 
-    <Grid>
+    <Grid  Background="{StaticResource ClaudePrimaryBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-
         <!-- Header -->
-        <Grid Grid.Row="0" Background="{StaticResource ClaudePrimaryBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="ArtifactTitle" 
+        <TextBlock x:Name="ArtifactTitle" 
                        Text="Artifact Name" 
                        Foreground="{StaticResource ClaudeTextBrush}"
                        FontSize="16"
                        FontWeight="Bold"/>
-            <Button Grid.Column="1" 
-                    Content="Close" 
-                    Click="CloseButton_Click"
-                    Style="{StaticResource SmallButtonStyle}"
-                    Width="60"/>
-        </Grid>
 
         <!-- Content -->
         <wv2:WebView2 x:Name="ContentViewer" 

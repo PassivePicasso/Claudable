@@ -67,7 +67,14 @@ namespace Claudable.Windows
             string language = DetectLanguage();
             string languageClass = !string.IsNullOrEmpty(language) ? $"class=\"language-{language}\"" : "";
 
-            string htmlContent = $@"
+            string htmlContent = GetHtmlContent(languageClass);
+
+            ContentViewer.NavigateToString(htmlContent);
+        }
+
+        private string GetHtmlContent(string languageClass)
+        {
+            return $@"
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -116,13 +123,6 @@ namespace Claudable.Windows
                     </script>
                 </body>
                 </html>";
-
-            ContentViewer.NavigateToString(htmlContent);
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
         }
     }
 

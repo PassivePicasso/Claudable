@@ -1,8 +1,7 @@
+using Claudable.ViewModels;
 using Microsoft.Web.WebView2.Core;
 using System.IO;
 using System.Windows;
-using Claudable.ViewModels;
-using Microsoft.Web.WebView2.Wpf;
 
 namespace Claudable.Windows
 {
@@ -11,6 +10,7 @@ namespace Claudable.Windows
         private readonly ProjectFile _projectFile;
         private readonly string _localContent;
         private readonly string _artifactContent;
+        private readonly bool _isLocalNewer;
 
         public static async Task ShowDiffDialog(ProjectFile projectFile)
         {
@@ -35,6 +35,7 @@ namespace Claudable.Windows
             _projectFile = projectFile;
             _localContent = localContent;
             _artifactContent = artifactContent;
+            _isLocalNewer = _projectFile.LocalLastModified > _projectFile.ArtifactLastModified;
 
             UpdateHeader();
             Loaded += DiffViewer_Loaded;
@@ -43,8 +44,6 @@ namespace Claudable.Windows
         private void UpdateHeader()
         {
             FileNameText.Text = $"Comparing versions of: {_projectFile.Name}";
-            LocalTimestampText.Text = _projectFile.LocalLastModified.ToString("g");
-            ArtifactTimestampText.Text = _projectFile.ArtifactLastModified.ToString("g");
         }
 
         private async void DiffViewer_Loaded(object sender, RoutedEventArgs e)
@@ -97,7 +96,12 @@ namespace Claudable.Windows
         private void LoadDiffEditor()
         {
             string language = DetectLanguage();
-            string htmlContent = $@"
+            string htmlContent = GetHtmlContent(language);
+
+            DiffWebViewer.CoreWebView2.NavigateToString(htmlContent);
+        }
+
+        private string GetHtmlContent(string language) => $@"
 <!DOCTYPE html>
 <html>
 <head>
@@ -109,21 +113,45 @@ namespace Claudable.Windows
             background-color: #2d2d2a;
             overflow: hidden;
         }}
-        #container {{
+        #root {{
             width: 100vw;
             height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }}
+        #title {{
+            display: flex;
+            flex-direction: row;
+        }}
+        #container {{
+            flex-grow: 1;
+        }}
+        .diff-title {{
+            flex-grow: 1;
+            color: #ceccc5;
+            background-color: #1a1915;
+            padding: 4px 12px;
+            border-radius: 0 0 4px 4px;
+            font-family: 'Söhne', 'Segoe UI', sans-serif;
+            font-size: 12px;
+            z-index: 1000;
         }}
     </style>
     <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css'>
 </head>
 <body>
-    <div id='container'></div>
+    <div id='root'>
+        <div id='title'>
+            <div class='diff-title' id='original-title'>{(_isLocalNewer ? "Artifact Version" : "Local Version")} ({(_isLocalNewer ? _projectFile.ArtifactLastModified : _projectFile.LocalLastModified):g})</div>
+            <div class='diff-title' id='modified-title'>{(_isLocalNewer ? "Local Version" : "Artifact Version")} ({(_isLocalNewer ? _projectFile.LocalLastModified : _projectFile.ArtifactLastModified):g})</div>
+        </div>
+        <div id='container'></div>
+    </div>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js'></script>
     <script>
         require.config({{ paths: {{ vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }} }});
 
         require(['vs/editor/editor.main'], function() {{
-            // Define custom theme
             monaco.editor.defineTheme('claudeTheme', {{
                 base: 'vs-dark',
                 inherit: true,
@@ -160,8 +188,12 @@ namespace Claudable.Windows
                 }}
             }});
 
-            var originalModel = monaco.editor.createModel({JsonEscapeString(_localContent)}, '{language}');
-            var modifiedModel = monaco.editor.createModel({JsonEscapeString(_artifactContent)}, '{language}');
+            // Determine which content goes on which side based on timestamps
+            var originalContent = {(_isLocalNewer ? JsonEscapeString(_artifactContent) : JsonEscapeString(_localContent))};
+            var modifiedContent = {(_isLocalNewer ? JsonEscapeString(_localContent) : JsonEscapeString(_artifactContent))};
+
+            var originalModel = monaco.editor.createModel(originalContent, '{language}');
+            var modifiedModel = monaco.editor.createModel(modifiedContent, '{language}');
             
             diffEditor.setModel({{
                 original: originalModel,
@@ -172,39 +204,9 @@ namespace Claudable.Windows
 </body>
 </html>";
 
-            DiffWebViewer.CoreWebView2.NavigateToString(htmlContent);
-        }
-
         private string JsonEscapeString(string str)
         {
             return System.Text.Json.JsonSerializer.Serialize(str);
-        }
-
-        private async void SyncToArtifact_Click(object sender, RoutedEventArgs e)
-        {
-            if (MessageBox.Show(
-                "Are you sure you want to update this file to match the artifact version? This will overwrite your local changes.",
-                "Confirm Sync",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning) == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    await File.WriteAllTextAsync(_projectFile.FullPath, _artifactContent);
-                    _projectFile.LocalLastModified = DateTime.Now;
-                    UpdateHeader();
-                    MessageBox.Show("File has been successfully synchronized with the artifact version.", "Sync Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error synchronizing file: {ex.Message}", "Sync Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
         }
     }
 }

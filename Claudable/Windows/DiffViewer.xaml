@@ -8,59 +8,20 @@
         Title="Diff Viewer" Height="800" Width="1200"
         WindowStartupLocation="CenterOwner">
 
-    <Grid>
+    <Grid  Background="{StaticResource ClaudePrimaryBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Background="{StaticResource ClaudePrimaryBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" Orientation="Vertical">
-                <TextBlock x:Name="FileNameText" 
+        <StackPanel Grid.Row="0" Orientation="Vertical">
+            <TextBlock x:Name="FileNameText" 
                           Text="Comparing versions of: filename.ext"
                           Foreground="{StaticResource ClaudeTextBrush}"
                           FontSize="16"
                           FontWeight="Bold"/>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock Text="Local: " 
-                             Foreground="{StaticResource ClaudeTextBrush}"
-                             FontSize="12"/>
-                    <TextBlock x:Name="LocalTimestampText"
-                             Text="timestamp"
-                             Foreground="{StaticResource ClaudeTextBrush}"
-                             FontSize="12"
-                             Margin="4,0,12,0"/>
-                    <TextBlock Text="Artifact: "
-                             Foreground="{StaticResource ClaudeTextBrush}"
-                             FontSize="12"/>
-                    <TextBlock x:Name="ArtifactTimestampText"
-                             Text="timestamp"
-                             Foreground="{StaticResource ClaudeTextBrush}"
-                             FontSize="12"
-                             Margin="4,0,0,0"/>
-                </StackPanel>
-            </StackPanel>
-
-            <Button Grid.Column="1"
-                    Content="Sync to Artifact"
-                    Click="SyncToArtifact_Click"
-                    Style="{StaticResource SmallButtonStyle}"
-                    Width="100"
-                    Margin="0,0,10,0"/>
-
-            <Button Grid.Column="2" 
-                    Content="Close" 
-                    Click="CloseButton_Click"
-                    Style="{StaticResource SmallButtonStyle}"
-                    Width="60"/>
-        </Grid>
+        </StackPanel>
 
         <!-- Content -->
         <wv2:WebView2 x:Name="DiffWebViewer" 
