@@ -11,6 +11,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="NewFolder\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
+    <None Remove="NewFolder\**" />
+    <Page Remove="NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Images\Designer.png" />
     <None Remove="Images\folder.png" />
   </ItemGroup>
@@ -35,7 +42,6 @@
 
   <ItemGroup>
     <Folder Include="Converters\" />
-    <Folder Include="NewFolder\" />
   </ItemGroup>
 
 </Project>
