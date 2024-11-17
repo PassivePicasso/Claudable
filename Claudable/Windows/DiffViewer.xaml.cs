@@ -169,7 +169,7 @@ namespace Claudable.Windows
 
             var diffEditor = monaco.editor.createDiffEditor(document.getElementById('container'), {{
                 theme: 'claudeTheme',
-                language: '{language}',
+                language: '{{language}}',
                 automaticLayout: true,
                 readOnly: true,
                 renderSideBySide: true,
@@ -178,13 +178,18 @@ namespace Claudable.Windows
                 minimap: {{ enabled: false }},
                 scrollBeyondLastLine: false,
                 folding: true,
-                renderOverviewRuler: false,
+                renderOverviewRuler: true, // Enable the overview ruler for diff markers
+                overviewRulerLanes: 2,
+                overviewRulerBorder: true,
                 scrollbar: {{
                     useShadows: false,
                     verticalHasArrows: true,
                     horizontalHasArrows: true,
                     vertical: 'visible',
-                    horizontal: 'visible'
+                    horizontal: 'visible',
+                    verticalScrollbarSize: 14,
+                    verticalSliderSize: 14,
+                    scrollByPage: true
                 }}
             }});
 
