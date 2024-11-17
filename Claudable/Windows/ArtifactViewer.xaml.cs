@@ -12,7 +12,6 @@ namespace Claudable.Windows
         {
             InitializeComponent();
             _options = options;
-            ArtifactTitle.Text = _options.Title;
             Loaded += ArtifactViewer_Loaded;
         }
 
@@ -78,42 +77,47 @@ namespace Claudable.Windows
                 <!DOCTYPE html>
                 <html>
                 <head>
+                    <meta charset='utf-8'>
                     <link rel=""stylesheet"" href=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"">
                     <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js""></script>
-                    <!-- Add commonly used language packs -->
                     <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js""></script>
                     <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js""></script>
                     <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js""></script>
                     <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js""></script>
                     <style>
-                        body {{
-                            font-family: 'Söhne', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                            margin: 20px;
+                        html, body {{
+                            margin: 0;
+                            padding: 0;
+                            height: 100vh;
+                            overflow: auto;
                             background-color: #2d2d2a;
                             color: #ceccc5;
+                            font-family: 'Söhne', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        }}
+                        pre {{
+                            margin: 0;
+                            white-space:pre-wrap;
+                            height: 100vh;
+                            box-sizing: border-box;
                         }}
                         pre code {{
+                            margin: 0;
                             font-family: 'Consolas', 'Courier New', monospace;
-                            padding: 15px !important;
-                            border-radius: 5px;
                             font-size: 14px;
                             line-height: 1.5;
                         }}
-                        .file-info {{
-                            margin-bottom: 10px;
-                            padding: 8px;
-                            background-color: #1a1915;
-                            border-radius: 4px;
-                            font-size: 12px;
-                            color: #888;
+                        code {{
+                            padding: 8px !important;
+                        }}
+                        #codezone {{
+                            overflow: visible;
                         }}
                     </style>
                 </head>
                 <body>
-                    <div class=""file-info"">
-                        {_options.Title}
+                    <div>
+                        <pre><code {languageClass}>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</code></pre>
                     </div>
-                    <pre><code {languageClass}>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</code></pre>
                     <script>
                         document.addEventListener('DOMContentLoaded', (event) => {{
                             document.querySelectorAll('pre code').forEach((el) => {{

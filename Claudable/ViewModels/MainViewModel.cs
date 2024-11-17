@@ -51,7 +51,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public ProjectFolder RootProjectFolder
         {
             get => _rootProjectFolder;
@@ -63,7 +62,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public FilterViewModel FilterViewModel
         {
             get => _filterViewModel;
@@ -73,7 +71,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public DownloadManager DownloadManager
         {
             get => _downloadManager;
@@ -83,7 +80,6 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public bool IsPanelsSwapped
         {
             get => _isPanelsSwapped;
@@ -96,7 +92,6 @@ namespace Claudable.ViewModels
                 }
             }
         }
-
         public int SelectedTabIndex
         {
             get => _selectedTabIndex;
@@ -109,7 +104,6 @@ namespace Claudable.ViewModels
                 }
             }
         }
-
         public FilterMode CurrentFilterMode
         {
             get => _currentFilterMode;
@@ -132,9 +126,7 @@ namespace Claudable.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public ObservableCollection<SvgArtifactViewModel> SvgArtifacts => ArtifactManager.SvgArtifacts;
-
         public ICommand SetProjectRootCommand { get; private set; }
         public ICommand SaveStateCommand { get; private set; }
         public ICommand LoadStateCommand { get; private set; }
@@ -168,12 +160,12 @@ namespace Claudable.ViewModels
         private void ViewArtifact(ArtifactViewModel artifact)
         {
             if (artifact == null) return;
-            ShowViewer(artifact.FileName, artifact.Content);
+            ShowViewer($"Artifact Viewer ({artifact.FileName})", artifact.Content);
         }
         private void ViewProjectFile(ProjectFile projectFile)
         {
             if (projectFile == null) return;
-            ShowViewer(Path.GetFileName(projectFile.FullPath), 
+            ShowViewer($"Project File Viewer ({Path.GetFileName(projectFile.FullPath)})", 
                        File.ReadAllText(projectFile.FullPath));
         }
         private void ShowViewer(string title, string content)
@@ -181,7 +173,7 @@ namespace Claudable.ViewModels
             var options = new ArtifactViewerOptions { Title = title, Content = content };
             var viewer = new ArtifactViewer(options)
             {
-                Title = $"Project File Viewer ({title})",
+                Title = title,
                 Owner = Application.Current.MainWindow
             };
             viewer.Show();

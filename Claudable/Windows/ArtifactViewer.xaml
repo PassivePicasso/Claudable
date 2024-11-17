@@ -13,12 +13,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <!-- Header -->
-        <TextBlock x:Name="ArtifactTitle" 
-                       Text="Artifact Name" 
-                       Foreground="{StaticResource ClaudeTextBrush}"
-                       FontSize="16"
-                       FontWeight="Bold"/>
 
         <!-- Content -->
         <wv2:WebView2 x:Name="ContentViewer" 
