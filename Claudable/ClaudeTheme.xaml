@@ -634,14 +634,21 @@
                            Opacity="0.7"/>
 
                 <!-- View Remote Button -->
-                <Button Grid.Row="0" Grid.Column="2"
-                        Content="View Artifact" Width="100"
+                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="Untrack" 
+                        Command="{Binding UntrackArtifactCommand}"
+                        Visibility="{Binding IsTrackedAsArtifact, 
+                                   Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Style="{StaticResource SmallButtonStyle}"
+                        />
+                    <Button Content="View Artifact" Width="100"
                         Command="{Binding DataContext.ViewArtifactCommand, 
                                     RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding}"
                         Style="{StaticResource SmallButtonStyle}"
-                        VerticalAlignment="Center"/>
+                        />
 
+                </StackPanel>
                 <!-- View Local Button -->
                 <Button Grid.Row="1" Grid.Column="2" Content="View Local" Width="100"
                         Command="{Binding DataContext.ViewProjectFileCommand, 
@@ -649,7 +656,8 @@
                         CommandParameter="{Binding Path=ProjectFile}"
                         Style="{StaticResource SmallButtonStyle}"
                         Visibility="{Binding HasLocalFile,
-                         Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                         Converter={StaticResource BooleanToVisibilityConverter}}"
+                        HorizontalAlignment="Right"/>
                 <!-- Missing File Warning -->
                 <TextBlock Grid.Row="1" Grid.Column="2"
                            Text="⚠️ No local file"

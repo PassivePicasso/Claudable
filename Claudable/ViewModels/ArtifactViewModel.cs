@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace Claudable.ViewModels
 {
@@ -80,6 +81,26 @@ namespace Claudable.ViewModels
                 _projectFile = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasLocalFile));
+            }
+        }
+        public ICommand UntrackArtifactCommand { get; private set; }
+
+        public ArtifactViewModel()
+        {
+            UntrackArtifactCommand = new RelayCommand(UntrackArtifact);
+        }
+        public async void UntrackArtifact()
+        {
+            try
+            {
+                if (ProjectFile != null)
+                    ProjectFile.UntrackArtifact();
+                else
+                    await WebViewManager.Instance.DeleteArtifact(this);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error untracking artifact: {ex.Message}");
             }
         }
 
