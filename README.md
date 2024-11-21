@@ -1,6 +1,6 @@
 # Claudable
 
-Claudable is a sophisticated desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
+Claudable is a desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
 
 ![Claudable Screenshot](Graphics/Screenshot2.png)
 
