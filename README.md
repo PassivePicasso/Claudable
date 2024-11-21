@@ -1,6 +1,6 @@
 # Claudable
 
-Claudable is a sophisticated desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
+Claudable is a desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
 
 ![Claudable Screenshot](Graphics/Screenshot2.png)
 
@@ -53,7 +53,7 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 - Status notifications
 
 ### 6. Project Association
-- Linking of local folders with Claude projects
+- Automatic linking of local folders with Claude projects
 - State persistence between sessions
 - Multi-project support
 - Automatic project switching
@@ -93,19 +93,21 @@ The source code of Claudable is open and concise, allowing for easy review. If c
   - SVG.Skia for SVG handling
   - Newtonsoft.Json for serialization
   - Win32 API integration for shell features
+  - Monaco Editor for diff viewing
+  - Highlight.js for syntax highlighting
 
 ## Getting Started
 
 ### Prerequisites
 - Windows 10 or later
-- .NET 8.0 Runtime
+- Visual Studio 2022 or later
+- .NET 8.0 SDK
 - WebView2 Runtime (automatically installed with modern Windows)
 
 ### Installation
-1. Download the latest release from the GitHub releases page
-2. Extract the zip file to your preferred location
-3. Open in Visual Studio
-5. Build and Run
+1. Clone or download the repository
+2. Open in Visual Studio
+3. Build and Run
 
 ### First Run Setup
 1. Launch Claudable and wait for the Claude AI interface to load
@@ -155,6 +157,7 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 4. Settings persist between sessions
 
 ### Working with Artifacts
+- Double-click files to view content
 - Use Compare button for diff view
 - Right-click for Windows context menu
 - Drag files to Claude AI interface
@@ -167,5 +170,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgements
 - Claude AI by Anthropic
-- Microsoft for WebView2
+- Microsoft for WebView2 and Monaco Editor
 - SkiaSharp and SVG.Skia libraries
+- Highlight.js for syntax highlighting
+- Microsoft for Monaco Editor integration
