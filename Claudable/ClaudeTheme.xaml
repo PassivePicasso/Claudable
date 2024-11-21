@@ -332,7 +332,7 @@
     <!-- Small Button Style -->
     <Style x:Key="SmallButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Height" Value="20"/>
-        <Setter Property="Padding" Value="5,-2,5,2"/>
+        <Setter Property="Padding" Value="2,-2,2,2"/>
         <Setter Property="FontSize" Value="10"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
@@ -596,7 +596,7 @@
     <DataTemplate x:Key="TrackedArtifact" DataType="vm:ArtifactViewModel">
         <Border BorderBrush="{StaticResource ClaudeBorderBrush}" 
                 BorderThickness="0,0,0,1" 
-                Padding="10,5"
+                Padding="0" MinWidth="270"
                 Background="{Binding HasLocalFile, Converter={StaticResource BoolToColorConverter}}">
             <Border.InputBindings>
                 <MouseBinding MouseAction="LeftDoubleClick" 
@@ -604,53 +604,51 @@
                                       RelativeSource={RelativeSource AncestorType=Window}}"
                               />
             </Border.InputBindings>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
+            <Grid MinHeight="50">
                 <!-- File Icon -->
                 <TextBlock Grid.Row="0" Grid.Column="0" 
-                           Text="📄" FontSize="16" 
-                           Margin="0,0,10,0"
+                           Text="📄" FontSize="32" 
+                           Margin="0,-3,0,0"
                            VerticalAlignment="Center"/>
 
                 <!-- Filename -->
                 <TextBlock Grid.Row="0" Grid.Column="1" 
                            Text="{Binding FileName}" 
-                           FontWeight="Bold"/>
+                           FontWeight="Bold"
+                           VerticalAlignment="Top"
+                           Margin="40,0,0,0"/>
 
                 <!-- Creation Time -->
-                <TextBlock Grid.Row="1" Grid.Column="1" 
+                <TextBlock Grid.Row="0" Grid.Column="1" 
                            Text="{Binding CreatedAt, StringFormat='Created: {0:g}'}"
                            FontSize="11" 
                            Foreground="{StaticResource ClaudeTextBrush}" 
-                           Opacity="0.7"/>
+                           Opacity="0.7"
+                           Margin="0,2,2,0"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Top"/>
 
-                <!-- View Remote Button -->
-                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="Untrack" 
+                <Button Content="Untrack" 
                         Command="{Binding UntrackArtifactCommand}"
                         Visibility="{Binding IsTrackedAsArtifact, 
                                    Converter={StaticResource BooleanToVisibilityConverter}}"
                         Style="{StaticResource SmallButtonStyle}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,4,4"
                         />
-                    <Button Content="View Artifact" Width="100"
+                <!-- View Remote Button -->
+                <WrapPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="38,0,0,4" 
+                           HorizontalAlignment="Left" VerticalAlignment="Bottom">
+                    <Button Content="View Artifact"
                         Command="{Binding DataContext.ViewArtifactCommand, 
                                     RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding}"
                         Style="{StaticResource SmallButtonStyle}"
                         />
 
-                </StackPanel>
-                <!-- View Local Button -->
-                <Button Grid.Row="1" Grid.Column="2" Content="View Local" Width="100"
+                    <!-- View Local Button -->
+                    <Button Content="View Local"
                         Command="{Binding DataContext.ViewProjectFileCommand, 
                                     RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding Path=ProjectFile}"
@@ -658,14 +656,15 @@
                         Visibility="{Binding HasLocalFile,
                          Converter={StaticResource BooleanToVisibilityConverter}}"
                         HorizontalAlignment="Right"/>
-                <!-- Missing File Warning -->
-                <TextBlock Grid.Row="1" Grid.Column="2"
+                    <!-- Missing File Warning -->
+                    <TextBlock Grid.Column="2"
                            Text="⚠️ No local file"
                            Foreground="#FFCC00"
                            Visibility="{Binding HasLocalFile,
                             Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"/>
+                </WrapPanel>
             </Grid>
         </Border>
     </DataTemplate>
