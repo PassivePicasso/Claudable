@@ -137,6 +137,7 @@ namespace Claudable.ViewModels
         public ICommand ViewArtifactCommand { get; private set; }
         public ICommand ViewProjectFileCommand { get; private set; }
         public ICommand CompareFilesCommand { get; }
+        public ICommand CopyFileNameCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -155,6 +156,7 @@ namespace Claudable.ViewModels
             ViewArtifactCommand = new RelayCommand<ArtifactViewModel>(ViewArtifact);
             ViewProjectFileCommand = new RelayCommand<ProjectFile>(ViewProjectFile);
             CompareFilesCommand = new RelayCommand<ProjectFile>(async pf => await DiffViewer.ShowDiffDialog(pf));
+            CopyFileNameCommand = new RelayCommand<ProjectFile>(pf => Clipboard.SetText(pf.Name));
         }
 
         private void ViewArtifact(ArtifactViewModel artifact)

@@ -124,7 +124,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-                                
+
                                 <TreeView x:Name="ProjectStructureTreeView"
                                           Grid.Row="1"
                                           ItemsSource="{Binding RootProjectFolder.FilteredChildren}"
@@ -136,7 +136,13 @@
                                           Drop="ProjectFolder_Drop"
                                           PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
                                           PreviewMouseRightButtonDown="TreeView_PreviewMouseRightButtonDown"
-                                          MouseMove="TreeView_MouseMove"/>
+                                          MouseMove="TreeView_MouseMove">
+                                    <TreeView.InputBindings>
+                                        <KeyBinding Key="C" Modifiers="Control" 
+                                                  Command="{Binding CopyFileNameCommand}"
+                                                  CommandParameter="{Binding ElementName=ProjectStructureTreeView, Path=SelectedItem}"/>
+                                    </TreeView.InputBindings>
+                                </TreeView>
                             </Grid>
 
                             <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Height="5"/>
