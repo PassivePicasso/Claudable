@@ -1,17 +1,23 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using System.IO;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Claudable.Windows
 {
     public partial class ArtifactViewer : Window
     {
         private ArtifactViewerOptions _options;
+        private bool _isRendered = true;
+        private bool _isLineNumbersEnabled = true;
+        private bool _isWrapEnabled = false;
+        private string _detectedLanguage;
 
         public ArtifactViewer(ArtifactViewerOptions options)
         {
             InitializeComponent();
             _options = options;
+            _detectedLanguage = DetectLanguage();
             Loaded += ArtifactViewer_Loaded;
         }
 
@@ -30,10 +36,43 @@ namespace Claudable.Windows
 
             var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
             await ContentViewer.EnsureCoreWebView2Async(env);
+
+            // Set up message handling for toggle commands
+            ContentViewer.CoreWebView2.WebMessageReceived += HandleWebMessage;
         }
+
+        private void HandleWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            var message = e.WebMessageAsJson;
+            // Handle toggle messages from the web view
+            try
+            {
+                var command = System.Text.Json.JsonSerializer.Deserialize<ViewerCommand>(message);
+                switch (command.action)
+                {
+                    case "toggleRender":
+                        _isRendered = !_isRendered;
+                        DisplayContent();
+                        break;
+                    case "toggleLineNumbers":
+                        _isLineNumbersEnabled = !_isLineNumbersEnabled;
+                        DisplayContent();
+                        break;
+                    case "toggleWrap":
+                        _isWrapEnabled = !_isWrapEnabled;
+                        DisplayContent();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error handling web message: {ex.Message}");
+            }
+        }
+
         private string DetectLanguage()
         {
-            string extension = Path.GetExtension(_options.Title).ToLowerInvariant();
+            string extension = Path.GetExtension(_options.FileName).ToLowerInvariant();
             return extension switch
             {
                 ".cs" => "csharp",
@@ -41,99 +80,284 @@ namespace Claudable.Windows
                 ".ts" => "typescript",
                 ".html" => "html",
                 ".css" => "css",
-                ".xml" => "xml",
+                ".xml" or ".xaml" or ".axaml" or ".axml" or ".appxml" or
+                ".config" or ".csproj" or ".vbproj" or ".fsproj" or
+                ".build" or ".targets" or ".props" or ".rdl" or
+                ".settings" or ".manifest" or ".resx" or ".ruleset" or
+                ".vstemplate" or ".vsixmanifest" or ".nuspec" or
+                ".msbuild" or ".xsd" or ".wsdl" or ".soap" or ".svg" => "xml",
                 ".json" => "json",
-                ".md" => "markdown",
+                ".md" or ".markdown" => "markdown",
                 ".py" => "python",
                 ".rb" => "ruby",
                 ".java" => "java",
-                ".cpp" => "cpp",
+                ".cpp" or ".hpp" => "cpp",
                 ".h" => "cpp",
                 ".sql" => "sql",
                 ".sh" => "bash",
-                ".yaml" => "yaml",
-                ".yml" => "yaml",
+                ".yaml" or ".yml" => "yaml",
                 ".php" => "php",
                 ".rs" => "rust",
                 ".go" => "go",
                 ".swift" => "swift",
-                _ => ""
+                _ => "plaintext"
             };
         }
 
+        private bool IsMarkdown => _detectedLanguage == "markdown";
+
         private void DisplayContent()
         {
-            string language = DetectLanguage();
-            string languageClass = !string.IsNullOrEmpty(language) ? $"class=\"language-{language}\"" : "";
-
-            string htmlContent = GetHtmlContent(languageClass);
-
+            string htmlContent = GetHtmlContent();
             ContentViewer.NavigateToString(htmlContent);
         }
 
-        private string GetHtmlContent(string languageClass)
+        private string GetHtmlContent()
         {
             return $@"
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset='utf-8'>
-                    <link rel=""stylesheet"" href=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"">
-                    <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js""></script>
-                    <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js""></script>
-                    <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js""></script>
-                    <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js""></script>
-                    <script src=""https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js""></script>
-                    <style>
-                        html, body {{
-                            margin: 0;
-                            padding: 0;
-                            height: 100vh;
-                            overflow: auto;
-                            background-color: #2d2d2a;
-                            color: #ceccc5;
-                            font-family: 'Söhne', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-dark.min.css'>
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.2/markdown-it.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js'></script>
+    {GetLanguageScripts()}
+    <style>
+        {GetStyles()}
+    </style>
+</head>
+<body>
+    <div id='toolbar'>
+        {GetToolbarButtons()}
+    </div>
+    <div id='content' class='{GetContentClasses()}'>
+        {GetInitialContent()}
+    </div>
+    <script>
+        {GetJavaScript()}
+    </script>
+</body>
+</html>";
+        }
+
+        private string GetLanguageScripts()
+        {
+            var languages = new[]
+            {
+                "xml", "csharp", "javascript", "typescript", "css", "json", "markdown",
+                "python", "ruby", "java", "cpp", "sql", "yaml", "bash", "php",
+                "rust", "go", "swift"
+            };
+
+            return string.Join("\n", languages.Select(lang =>
+                $"<script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/{lang}.min.js'></script>"));
+        }
+
+        private string GetStyles()
+        {
+            return @"
+                :root {
+                    --claude-bg: #2d2d2a;
+                    --claude-primary: #1a1915;
+                    --claude-text: #ceccc5;
+                    --claude-highlight: #53524c;
+                    --claude-border: #3e3e39;
+                }
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                    height: 100vh;
+                    background-color: var(--claude-bg);
+                    color: var(--claude-text);
+                    font-family: 'Söhne', 'Segoe UI', sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                }
+                #toolbar {
+                    background-color: var(--claude-primary);
+                    padding: 8px;
+                    border-bottom: 1px solid var(--claude-border);
+                    display: flex;
+                    gap: 8px;
+                }
+                .toolbar-button {
+                    background-color: var(--claude-bg);
+                    border: 1px solid var(--claude-border);
+                    color: var(--claude-text);
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                }
+                .toolbar-button:hover {
+                    background-color: var(--claude-highlight);
+                }
+                .toolbar-button.active {
+                    background-color: var(--claude-highlight);
+                    border-color: var(--claude-text);
+                }
+                #content {
+                    flex: 1;
+                    overflow: auto;
+                    padding: 26px;
+                }
+                .markdown-body {
+                    background-color: var(--claude-bg) !important;
+                    padding: 16px;
+                }
+                pre {
+                    background-color: var(--claude-primary) !important;
+                    margin: 0;
+                    margin: -26px;
+
+                }
+                .nowrap pre code {
+                    white-space: pre;
+                }
+                .wrap pre code {
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                }
+                .line-numbers pre code {
+                    counter-reset: line;
+                }
+                .line-numbers pre code > span {
+                    display: inline;
+                }
+                .line-numbers pre code > span:before {
+                    counter-increment: line;
+                    content: counter(line);
+                    display: inline-block;
+                    padding: 0 0.5em;
+                    margin-right: 0.5em;
+                    color: #666660;
+                    border-right: 1px solid var(--claude-border);
+                    min-width: 1.5em;
+                    text-align: right;
+                    -webkit-user-select: none; /* Chrome/Safari */ 
+                    -moz-user-select: none; /* Firefox */
+                    -ms-user-select: none; /* Internet Explorer/Edge */
+                    user-select: none;
+                }";
+        }
+
+        private string GetToolbarButtons()
+        {
+            var buttons = new List<string>();
+
+            if (IsMarkdown)
+            {
+                buttons.Add($@"<button class='toolbar-button{(_isRendered ? " active" : "")}' onclick='toggleRender()'>
+                              {(_isRendered ? "Show Source" : "Show Rendered")}</button>");
+            }
+
+            if (IsMarkdown ? _isRendered : false)
+                return string.Join("\n", buttons);
+
+            buttons.Add($@"<button class='toolbar-button{(_isLineNumbersEnabled ? " active" : "")}' onclick='toggleLineNumbers()'>
+                          {(_isLineNumbersEnabled ? "Hide Line Numbers" : "Show Line Numbers")}</button>");
+
+
+            buttons.Add($@"<button class='toolbar-button{(_isWrapEnabled ? " active" : "")}' onclick='toggleWrap()'>
+                          {(_isWrapEnabled ? "Disable Wrap" : "Enable Wrap")}</button>");
+
+            return string.Join("\n", buttons);
+        }
+
+        private string GetContentClasses()
+        {
+            var classes = new List<string>();
+
+            if (_isLineNumbersEnabled) classes.Add("line-numbers");
+            if (_isWrapEnabled) classes.Add("wrap");
+            else classes.Add("nowrap");
+
+            return string.Join(" ", classes);
+        }
+
+        private string GetInitialContent()
+        {
+            if (IsMarkdown && _isRendered)
+            {
+                return "<div id='markdown-content'></div>";
+            }
+            else
+            {
+                string languageClass = !string.IsNullOrEmpty(_detectedLanguage) ? $"class=\"language-{_detectedLanguage}\"" : "";
+                return $"<pre><code {languageClass}>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</code></pre>";
+            }
+        }
+
+        private string GetJavaScript()
+        {
+            return $@"
+                const sendMessage = (action) => {{
+                    window.chrome.webview.postMessage({{ action }});
+                }};
+
+                const toggleRender = () => sendMessage('toggleRender');
+                const toggleLineNumbers = () => sendMessage('toggleLineNumbers');
+                const toggleWrap = () => sendMessage('toggleWrap');
+
+                const initMarkdown = () => {{
+                    const md = window.markdownit({{
+                        html: true,
+                        linkify: true,
+                        highlight: (str, lang) => {{
+                            if (lang && hljs.getLanguage(lang)) {{
+                                try {{
+                                    return hljs.highlight(str, {{ language: lang }}).value;
+                                }} catch (__) {{}}
+                            }}
+                            return '';
                         }}
-                        pre {{
-                            margin: 0;
-                            white-space:pre-wrap;
-                            height: 100vh;
-                            box-sizing: border-box;
+                    }});
+
+                    const content = {System.Text.Json.JsonSerializer.Serialize(_options.Content)};
+                    document.getElementById('markdown-content').innerHTML = md.render(content);
+                }};
+
+                const initHighlight = () => {{
+                    document.querySelectorAll('pre code').forEach((block) => {{
+                        if (!block.className) {{
+                            const result = hljs.highlightAuto(block.textContent);
+                            block.innerHTML = result.value;
+                            block.className = `hljs language-${{result.language}}`;
+                        }} else {{
+                            hljs.highlightElement(block);
                         }}
-                        pre code {{
-                            margin: 0;
-                            font-family: 'Consolas', 'Courier New', monospace;
-                            font-size: 14px;
-                            line-height: 1.5;
-                        }}
-                        code {{
-                            padding: 8px !important;
-                        }}
-                        #codezone {{
-                            overflow: visible;
-                        }}
-                    </style>
-                </head>
-                <body>
-                    <div>
-                        <pre><code {languageClass}>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</code></pre>
-                    </div>
-                    <script>
-                        document.addEventListener('DOMContentLoaded', (event) => {{
-                            document.querySelectorAll('pre code').forEach((el) => {{
-                                hljs.highlightElement(el);
-                            }});
-                        }});
-                    </script>
-                </body>
-                </html>";
+
+                        // Add line number spans
+                        const lines = block.innerHTML.split('\n');
+                        block.innerHTML = lines.map(line => `<span>${{line}}</span>`).join('\n');
+                    }});
+                }};
+
+                // Initialize based on content type
+                window.addEventListener('DOMContentLoaded', () => {{
+                    const isMarkdown = {(IsMarkdown ? "true" : "false")};
+                    const isRendered = {(_isRendered ? "true" : "false")};
+                    
+                    if (isMarkdown && isRendered) {{
+                        initMarkdown();
+                    }} else {{
+                        initHighlight();
+                    }}
+                }});";
         }
     }
-
 
     public class ArtifactViewerOptions
     {
         public string Title { get; set; }
         public string Content { get; set; }
+        public string FileName { get; set; }
+    }
+
+    public class ViewerCommand
+    {
+        public string action { get; set; }
     }
 }

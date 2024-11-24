@@ -162,17 +162,25 @@ namespace Claudable.ViewModels
         private void ViewArtifact(ArtifactViewModel artifact)
         {
             if (artifact == null) return;
-            ShowViewer($"Artifact Viewer ({artifact.FileName})", artifact.Content);
+            ShowViewer($"Artifact Viewer ({artifact.FileName})",
+                       artifact.FileName,
+                       artifact.Content);
         }
         private void ViewProjectFile(ProjectFile projectFile)
         {
             if (projectFile == null) return;
-            ShowViewer($"Project File Viewer ({Path.GetFileName(projectFile.FullPath)})", 
+            ShowViewer($"Project File Viewer ({Path.GetFileName(projectFile.FullPath)})",
+                       Path.GetFileName(projectFile.FullPath),
                        File.ReadAllText(projectFile.FullPath));
         }
-        private void ShowViewer(string title, string content)
+        private void ShowViewer(string title, string filename, string content)
         {
-            var options = new ArtifactViewerOptions { Title = title, Content = content };
+            var options = new ArtifactViewerOptions
+            {
+                Title = title,
+                FileName = filename,
+                Content = content
+            };
             var viewer = new ArtifactViewer(options)
             {
                 Title = title,

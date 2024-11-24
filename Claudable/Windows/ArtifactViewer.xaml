@@ -9,13 +9,6 @@
         WindowStartupLocation="CenterOwner">
 
     <Grid  Background="{StaticResource ClaudePrimaryBrush}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <!-- Content -->
-        <wv2:WebView2 x:Name="ContentViewer" 
-                      Grid.Row="1"/>
+        <wv2:WebView2 x:Name="ContentViewer" />
     </Grid>
 </Window>
