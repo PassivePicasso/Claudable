@@ -1,104 +1,88 @@
-using Claudable.ViewModels;
+using System;
 using System.IO;
+using System.Threading;
+using Claudable.ViewModels;
 
 namespace Claudable.Services
 {
     public class FileWatcher : IDisposable
     {
-        private FileSystemWatcher _watcher;
-        private ProjectFolder _rootFolder;
-        private Action _updateProjectStructure;
-        private readonly object _lockObject = new object();
-        private Timer _batchTimer;
-        private readonly HashSet<string> _pendingChanges = new();
-        private const int BATCH_DELAY_MS = 250; // Reduced from 500ms to 250ms for better responsiveness
+        private readonly FileSystemWatcher _watcher;
+        private readonly ProjectFolder _rootFolder;
+        private readonly Timer _debounceTimer;
+        private volatile bool _changesPending;
+        private readonly object _syncLock = new object();
 
         public FileWatcher(ProjectFolder rootFolder, Action updateProjectStructure)
         {
             _rootFolder = rootFolder;
-            _updateProjectStructure = updateProjectStructure;
-            InitializeWatcher();
-            _batchTimer = new Timer(OnBatchTimerElapsed);
-        }
-
-        private void InitializeWatcher()
-        {
-            _watcher = new FileSystemWatcher(_rootFolder.FullPath)
+            _watcher = new FileSystemWatcher(rootFolder.FullPath)
             {
-                NotifyFilter = NotifyFilters.DirectoryName |
-                             NotifyFilters.FileName |
-                             NotifyFilters.LastWrite |
-                             NotifyFilters.CreationTime |
-                             NotifyFilters.Size,
+                NotifyFilter = NotifyFilters.FileName |          // For renames and create/delete
+                              NotifyFilters.DirectoryName |      // For folder renames
+                              NotifyFilters.LastWrite,           // For content changes
                 IncludeSubdirectories = true,
-                EnableRaisingEvents = true,
-                InternalBufferSize = 65536 // Increased buffer size for better handling of rapid changes
+                EnableRaisingEvents = true
             };
 
+            // Single timer for debouncing all changes
+            _debounceTimer = new Timer(_ =>
+            {
+                if (!_changesPending) return;
+
+                try
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        lock (_syncLock)
+                        {
+                            updateProjectStructure?.Invoke();
+                            _changesPending = false;
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error updating project structure: {ex}");
+                }
+            });
+
+            // Simple handlers that just mark changes as pending
             _watcher.Created += OnFileSystemChanged;
             _watcher.Deleted += OnFileSystemChanged;
             _watcher.Renamed += OnFileSystemChanged;
-            _watcher.Changed += OnFileSystemChanged;
-            _watcher.Error += OnWatcherError;
+            _watcher.Changed += OnFileModified;
         }
 
         private void OnFileSystemChanged(object sender, FileSystemEventArgs e)
         {
-            lock (_lockObject)
+            // File/folder was created, deleted, or renamed
+            // Mark changes pending and reset the debounce timer
+            ScheduleUpdate();
+        }
+
+        private void OnFileModified(object sender, FileSystemEventArgs e)
+        {
+            // Only care about LastWrite changes for files (not directories)
+            if (!Directory.Exists(e.FullPath))
             {
-                // Add the changed path to pending changes
-                _pendingChanges.Add(e.FullPath);
-                // Reset the timer each time a change is detected
-                _batchTimer.Change(BATCH_DELAY_MS, Timeout.Infinite);
+                ScheduleUpdate();
             }
         }
 
-        private void OnWatcherError(object sender, ErrorEventArgs e)
+        private void ScheduleUpdate()
         {
-            // Log the error
-            System.Diagnostics.Debug.WriteLine($"FileSystemWatcher error: {e.GetException()}");
-
-            // Attempt to restart the watcher
-            try
+            lock (_syncLock)
             {
-                _watcher.EnableRaisingEvents = false;
-                InitializeWatcher();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error restarting FileSystemWatcher: {ex}");
-            }
-        }
-
-        private void OnBatchTimerElapsed(object state)
-        {
-            lock (_lockObject)
-            {
-                if (_pendingChanges.Count > 0)
-                {
-                    // Clear pending changes before processing
-                    _pendingChanges.Clear();
-
-                    try
-                    {
-                        // Invoke the update on the UI thread
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            _updateProjectStructure?.Invoke();
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error updating project structure: {ex}");
-                    }
-                }
+                _changesPending = true;
+                _debounceTimer.Change(200, Timeout.Infinite);  // 200ms debounce
             }
         }
 
         public void Dispose()
         {
             _watcher?.Dispose();
-            _batchTimer?.Dispose();
+            _debounceTimer?.Dispose();
         }
     }
 }
