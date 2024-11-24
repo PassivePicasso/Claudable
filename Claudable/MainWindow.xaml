@@ -139,8 +139,12 @@
                                           MouseMove="TreeView_MouseMove">
                                     <TreeView.InputBindings>
                                         <KeyBinding Key="C" Modifiers="Control" 
-                                                  Command="{Binding CopyFileNameCommand}"
-                                                  CommandParameter="{Binding ElementName=ProjectStructureTreeView, Path=SelectedItem}"/>
+                                                    Command="{Binding CopyFileNameCommand}"
+                                                    CommandParameter="{Binding ElementName=ProjectStructureTreeView, 
+                                                                               Path=SelectedItem}"/>
+                                        <KeyBinding Key="F2" 
+                                                    Command="{Binding ElementName=ProjectStructureTreeView, 
+                                                                      Path=SelectedItem.BeginRenameCommand}"/>
                                     </TreeView.InputBindings>
                                 </TreeView>
                             </Grid>

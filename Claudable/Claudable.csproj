@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2730-prerelease" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.4.1" />
     <PackageReference Include="SkiaSharp" Version="2.88.8" />

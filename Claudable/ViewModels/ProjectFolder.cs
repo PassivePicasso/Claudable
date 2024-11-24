@@ -56,6 +56,7 @@ namespace Claudable.ViewModels
             Name = name;
             FullPath = fullPath;
             Parent = parent;
+            FilteredChildren = new ObservableCollection<FileSystemItem>();
         }
 
         public void AddChild(FileSystemItem child)
@@ -76,31 +77,28 @@ namespace Claudable.ViewModels
         {
             FilteredChildren.Clear();
 
-            foreach (var child in Children)
+            // Always add folders regardless of filter mode
+            foreach (var folder in Children.OfType<ProjectFolder>())
             {
-                switch (child)
-                {
-                    case ProjectFile file:
-                        var shouldAdd = filterMode switch
-                        {
-                            FilterMode.ShowOnlyTrackedArtifacts => file.IsTrackedAsArtifact,
-                            FilterMode.ShowOnlyOutdatedFiles => file.IsTrackedAsArtifact && file.IsLocalNewer,
-                            _ => true,
-                        };
-                        if (shouldAdd)
-                        {
-                            FilteredChildren.Add(child);
-                        }
-                        break;
-                    case ProjectFolder folder:
-                        folder.ApplyFilter(filterMode);
-                        if (folder.FilteredChildren.Count > 0)
-                            FilteredChildren.Add(child);
-                        break;
-                }
+                folder.ApplyFilter(filterMode);
+                FilteredChildren.Add(folder);
             }
 
-            IsVisible = FilteredChildren.Count > 0;
+            // Filter files based on the selected mode
+            var files = Children.OfType<ProjectFile>();
+            var filteredFiles = filterMode switch
+            {
+                FilterMode.ShowOnlyTrackedArtifacts => files.Where(file => file.IsTrackedAsArtifact),
+                FilterMode.ShowOnlyOutdatedFiles => files.Where(file => file.IsTrackedAsArtifact && file.IsLocalNewer),
+                _ => files
+            };
+
+            foreach (var file in filteredFiles)
+            {
+                FilteredChildren.Add(file);
+            }
+
+            IsVisible = true; // Always show folders
         }
 
         public IEnumerable<ProjectFile> GetAllProjectFiles()
