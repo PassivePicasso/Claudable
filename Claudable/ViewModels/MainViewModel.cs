@@ -231,88 +231,116 @@ namespace Claudable.ViewModels
 
         private bool UpdateProjectStructureRecursive(ProjectFolder folder)
         {
-            bool ShouldExcludeEntry(Filter filter, string filePath)
-            {
-                var filterValue = filter.ShouldPrependProjectFolder
-                    ? $"{RootProjectFolder.FullPath}{filter.Value}"
-                    : filter.Value;
-
-                return filePath.IndexOf(filterValue, StringComparison.OrdinalIgnoreCase) >= 0;
-            }
+            if (folder == null || !Directory.Exists(folder.FullPath))
+                return false;
 
             bool hasChanges = false;
             var currentItems = new HashSet<string>(folder.Children.Select(c => c.FullPath));
 
-            var entries = Directory.EnumerateFileSystemEntries(folder.FullPath)
-                                   .Where(filePath => !FilterViewModel.Filters.Any(filter => ShouldExcludeEntry(filter, filePath)));
-
-            var directoryItems = new HashSet<string>(entries);
-
-            // Remove items that no longer exist
-            foreach (var itemPath in currentItems.Except(directoryItems))
+            try
             {
-                var itemToRemove = folder.Children.FirstOrDefault(c => c.FullPath == itemPath);
-                if (itemToRemove != null)
+                var entries = Directory.EnumerateFileSystemEntries(folder.FullPath)
+                                       .Where(filePath => !FilterViewModel.Filters.Any(filter =>
+                                           ShouldExcludeEntry(filter, filePath)));
+
+                var directoryItems = new HashSet<string>(entries);
+
+                // Remove items that no longer exist
+                foreach (var itemPath in currentItems.Except(directoryItems).ToList())
                 {
-                    folder.Children.Remove(itemToRemove);
-                    _pathCache.TryRemove(itemPath, out _);
+                    var itemToRemove = folder.Children.FirstOrDefault(c => c.FullPath == itemPath);
+                    if (itemToRemove != null)
+                    {
+                        folder.Children.Remove(itemToRemove);
+                        _pathCache.TryRemove(itemPath, out _);
+                        hasChanges = true;
+                    }
+                }
+
+                // Add new items
+                foreach (var itemPath in directoryItems.Except(currentItems))
+                {
+                    if (_pathCache.TryGetValue(itemPath, out var existingItem))
+                    {
+                        folder.Children.Add(existingItem);
+                        hasChanges = true;
+                        continue;
+                    }
+
+                    var itemName = Path.GetFileName(itemPath);
+                    FileSystemItem newItem;
+
+                    if (Directory.Exists(itemPath))
+                    {
+                        newItem = new ProjectFolder(itemName, itemPath, folder);
+                        folder.Children.Add(newItem);
+                        UpdateProjectStructureRecursive((ProjectFolder)newItem);
+                    }
+                    else if (File.Exists(itemPath))
+                    {
+                        newItem = new ProjectFile(itemName, itemPath, folder);
+                        folder.Children.Add(newItem);
+                    }
+                    else
+                    {
+                        continue; // Skip if neither file nor directory exists
+                    }
+
+                    _pathCache.TryAdd(itemPath, newItem);
                     hasChanges = true;
                 }
-            }
 
-            // Add new items
-            foreach (var itemPath in directoryItems.Except(currentItems))
+                // Update existing files' timestamps
+                foreach (var child in folder.Children.OfType<ProjectFile>())
+                {
+                    if (File.Exists(child.FullPath))
+                    {
+                        var lastWrite = File.GetLastWriteTimeUtc(child.FullPath);
+                        if (child.LocalLastModified != lastWrite)
+                        {
+                            child.LocalLastModified = lastWrite;
+                            hasChanges = true;
+                        }
+                    }
+                }
+
+                // Recursively update existing subfolders
+                foreach (var child in folder.Children.OfType<ProjectFolder>().ToList())
+                {
+                    hasChanges |= UpdateProjectStructureRecursive(child);
+                }
+
+                // Sort children if there were changes
+                if (hasChanges)
+                {
+                    var sortedChildren = folder.Children
+                        .OrderBy(c => c is ProjectFile)
+                        .ThenBy(c => c.Name)
+                        .ToList();
+
+                    folder.Children.Clear();
+                    foreach (var child in sortedChildren)
+                    {
+                        folder.Children.Add(child);
+                    }
+                }
+
+                return hasChanges;
+            }
+            catch (Exception ex)
             {
-                if (_pathCache.TryGetValue(itemPath, out var existingItem))
-                {
-                    folder.Children.Add(existingItem);
-                    hasChanges = true;
-                    continue;
-                }
-
-                var itemName = Path.GetFileName(itemPath);
-                FileSystemItem newItem;
-
-                if (Directory.Exists(itemPath))
-                {
-                    newItem = new ProjectFolder(itemName, itemPath, folder);
-                    folder.Children.Add(newItem);
-                    UpdateProjectStructureRecursive((ProjectFolder)newItem);
-                }
-                else
-                {
-                    newItem = new ProjectFile(itemName, itemPath, folder);
-                    folder.Children.Add(newItem);
-                }
-
-                _pathCache.TryAdd(itemPath, newItem);
-                hasChanges = true;
-
-                //ExpandToItem(newItem);
+                System.Diagnostics.Debug.WriteLine($"Error updating project structure: {ex}");
+                return false;
             }
+        }
 
-            // Recursively update existing subfolders
-            foreach (var child in folder.Children.OfType<ProjectFolder>().ToList())
-            {
-                hasChanges |= UpdateProjectStructureRecursive(child);
-            }
+        private bool ShouldExcludeEntry(Filter filter, string filePath)
+        {
+            var filterValue = filter.ShouldPrependProjectFolder
+                ? Path.Combine(RootProjectFolder.FullPath, filter.Value)
+                : filter.Value;
 
-            // Sort children only if there were changes
-            if (hasChanges)
-            {
-                var sortedChildren = folder.Children
-                    .OrderBy(c => c is ProjectFile)
-                    .ThenBy(c => c.Name)
-                    .ToList();
-
-                folder.Children.Clear();
-                foreach (var child in sortedChildren)
-                {
-                    folder.Children.Add(child);
-                }
-            }
-
-            return hasChanges;
+            return filePath.IndexOf(filterValue, StringComparison.OrdinalIgnoreCase) >= 0;
         }
         private void ExpandToItem(FileSystemItem item)
         {

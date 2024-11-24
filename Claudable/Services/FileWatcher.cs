@@ -10,8 +10,8 @@ namespace Claudable.Services
         private Action _updateProjectStructure;
         private readonly object _lockObject = new object();
         private Timer _batchTimer;
-        private volatile bool _changesPending;
-        private const int BATCH_DELAY_MS = 500; // Batch changes for 500ms
+        private readonly HashSet<string> _pendingChanges = new();
+        private const int BATCH_DELAY_MS = 250; // Reduced from 500ms to 250ms for better responsiveness
 
         public FileWatcher(ProjectFolder rootFolder, Action updateProjectStructure)
         {
@@ -25,67 +25,74 @@ namespace Claudable.Services
         {
             _watcher = new FileSystemWatcher(_rootFolder.FullPath)
             {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                NotifyFilter = NotifyFilters.DirectoryName |
+                             NotifyFilters.FileName |
+                             NotifyFilters.LastWrite |
+                             NotifyFilters.CreationTime |
+                             NotifyFilters.Size,
                 IncludeSubdirectories = true,
-                EnableRaisingEvents = true
+                EnableRaisingEvents = true,
+                InternalBufferSize = 65536 // Increased buffer size for better handling of rapid changes
             };
 
             _watcher.Created += OnFileSystemChanged;
             _watcher.Deleted += OnFileSystemChanged;
             _watcher.Renamed += OnFileSystemChanged;
-            _watcher.Changed += OnFileChanged;
+            _watcher.Changed += OnFileSystemChanged;
+            _watcher.Error += OnWatcherError;
         }
 
         private void OnFileSystemChanged(object sender, FileSystemEventArgs e)
         {
             lock (_lockObject)
             {
-                _changesPending = true;
+                // Add the changed path to pending changes
+                _pendingChanges.Add(e.FullPath);
+                // Reset the timer each time a change is detected
                 _batchTimer.Change(BATCH_DELAY_MS, Timeout.Infinite);
+            }
+        }
+
+        private void OnWatcherError(object sender, ErrorEventArgs e)
+        {
+            // Log the error
+            System.Diagnostics.Debug.WriteLine($"FileSystemWatcher error: {e.GetException()}");
+
+            // Attempt to restart the watcher
+            try
+            {
+                _watcher.EnableRaisingEvents = false;
+                InitializeWatcher();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error restarting FileSystemWatcher: {ex}");
             }
         }
 
         private void OnBatchTimerElapsed(object state)
         {
-            if (_changesPending)
+            lock (_lockObject)
             {
-                _changesPending = false;
-                _updateProjectStructure();
-            }
-        }
-
-        private void OnFileChanged(object sender, FileSystemEventArgs e)
-        {
-            UpdateProjectFile(e.FullPath);
-        }
-
-        private void UpdateProjectFile(string fullPath)
-        {
-            var projectFile = FindProjectFile(_rootFolder, fullPath);
-            if (projectFile != null)
-            {
-                projectFile.LocalLastModified = File.GetLastWriteTime(fullPath);
-            }
-        }
-
-        private ProjectFile FindProjectFile(ProjectFolder folder, string fullPath)
-        {
-            foreach (var item in folder.Children)
-            {
-                if (item is ProjectFile file && file.FullPath == fullPath)
+                if (_pendingChanges.Count > 0)
                 {
-                    return file;
-                }
-                else if (item is ProjectFolder subFolder)
-                {
-                    var result = FindProjectFile(subFolder, fullPath);
-                    if (result != null)
+                    // Clear pending changes before processing
+                    _pendingChanges.Clear();
+
+                    try
                     {
-                        return result;
+                        // Invoke the update on the UI thread
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _updateProjectStructure?.Invoke();
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error updating project structure: {ex}");
                     }
                 }
             }
-            return null;
         }
 
         public void Dispose()
