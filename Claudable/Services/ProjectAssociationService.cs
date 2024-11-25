@@ -3,76 +3,75 @@ using Claudable.ViewModels;
 using Newtonsoft.Json;
 using System.IO;
 
-namespace Claudable.Services
+namespace Claudable.Services;
+
+public class ProjectAssociationService
 {
-    public class ProjectAssociationService
+    private readonly string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Claudable", "ProjectData.json");
+    private Dictionary<string, SerializableProjectData> _projectData;
+
+    public ProjectAssociationService()
     {
-        private readonly string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Claudable", "ProjectData.json");
-        private Dictionary<string, SerializableProjectData> _projectData;
+        _projectData = LoadProjectData();
+    }
 
-        public ProjectAssociationService()
+    private Dictionary<string, SerializableProjectData> LoadProjectData()
+    {
+        if (File.Exists(_filePath))
         {
-            _projectData = LoadProjectData();
+            string json = File.ReadAllText(_filePath);
+            return JsonConvert.DeserializeObject<Dictionary<string, SerializableProjectData>>(json) ?? new Dictionary<string, SerializableProjectData>();
         }
+        return new Dictionary<string, SerializableProjectData>();
+    }
 
-        private Dictionary<string, SerializableProjectData> LoadProjectData()
+    private void SaveProjectData()
+    {
+        string json = JsonConvert.SerializeObject(_projectData, Formatting.Indented);
+        Directory.CreateDirectory(Path.GetDirectoryName(_filePath));
+        File.WriteAllText(_filePath, json);
+    }
+
+    public SerializableProjectData GetProjectDataByUrl(string projectUrl)
+    {
+        return _projectData.TryGetValue(projectUrl, out var data) ? data : null;
+    }
+
+    public void AddOrUpdateProjectData(string projectUrl, string localFolderPath, List<ArtifactViewModel> artifacts)
+    {
+        if (_projectData.TryGetValue(projectUrl, out var existingData))
         {
-            if (File.Exists(_filePath))
+            existingData.ProjectAssociation.LocalFolderPath = localFolderPath;
+            existingData.Artifacts = artifacts;
+            existingData.LastUpdated = DateTime.Now;
+        }
+        else
+        {
+            _projectData[projectUrl] = new SerializableProjectData
             {
-                string json = File.ReadAllText(_filePath);
-                return JsonConvert.DeserializeObject<Dictionary<string, SerializableProjectData>>(json) ?? new Dictionary<string, SerializableProjectData>();
-            }
-            return new Dictionary<string, SerializableProjectData>();
-        }
-
-        private void SaveProjectData()
-        {
-            string json = JsonConvert.SerializeObject(_projectData, Formatting.Indented);
-            Directory.CreateDirectory(Path.GetDirectoryName(_filePath));
-            File.WriteAllText(_filePath, json);
-        }
-
-        public SerializableProjectData GetProjectDataByUrl(string projectUrl)
-        {
-            return _projectData.TryGetValue(projectUrl, out var data) ? data : null;
-        }
-
-        public void AddOrUpdateProjectData(string projectUrl, string localFolderPath, List<ArtifactViewModel> artifacts)
-        {
-            if (_projectData.TryGetValue(projectUrl, out var existingData))
-            {
-                existingData.ProjectAssociation.LocalFolderPath = localFolderPath;
-                existingData.Artifacts = artifacts;
-                existingData.LastUpdated = DateTime.Now;
-            }
-            else
-            {
-                _projectData[projectUrl] = new SerializableProjectData
+                ProjectAssociation = new ProjectAssociation
                 {
-                    ProjectAssociation = new ProjectAssociation
-                    {
-                        ProjectUrl = projectUrl,
-                        LocalFolderPath = localFolderPath
-                    },
-                    Artifacts = artifacts
-                };
-            }
+                    ProjectUrl = projectUrl,
+                    LocalFolderPath = localFolderPath
+                },
+                Artifacts = artifacts
+            };
+        }
+        SaveProjectData();
+    }
+
+    public void UpdateArtifacts(string projectUrl, List<ArtifactViewModel> artifacts)
+    {
+        if (_projectData.TryGetValue(projectUrl, out var existingData))
+        {
+            existingData.Artifacts = artifacts;
+            existingData.LastUpdated = DateTime.Now;
             SaveProjectData();
         }
+    }
 
-        public void UpdateArtifacts(string projectUrl, List<ArtifactViewModel> artifacts)
-        {
-            if (_projectData.TryGetValue(projectUrl, out var existingData))
-            {
-                existingData.Artifacts = artifacts;
-                existingData.LastUpdated = DateTime.Now;
-                SaveProjectData();
-            }
-        }
-
-        public List<string> GetAllProjectUrls()
-        {
-            return _projectData.Keys.ToList();
-        }
+    public List<string> GetAllProjectUrls()
+    {
+        return _projectData.Keys.ToList();
     }
 }

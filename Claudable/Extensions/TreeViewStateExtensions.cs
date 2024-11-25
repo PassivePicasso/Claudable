@@ -1,53 +1,52 @@
-﻿namespace Claudable.Extensions
+﻿namespace Claudable.Extensions;
+
+using ViewModels;
+
+public static class TreeViewStateExtensions
 {
-    using ViewModels;
-
-    public static class TreeViewStateExtensions
+    public static string[] GetExpandedPaths(this ProjectFolder rootFolder)
     {
-        public static string[] GetExpandedPaths(this ProjectFolder rootFolder)
+        var expandedPaths = new List<string>();
+        CollectExpandedPaths(rootFolder, expandedPaths);
+        return expandedPaths.ToArray();
+    }
+
+    private static void CollectExpandedPaths(ProjectFolder folder, List<string> expandedPaths)
+    {
+        if (folder.IsExpanded)
         {
-            var expandedPaths = new List<string>();
-            CollectExpandedPaths(rootFolder, expandedPaths);
-            return expandedPaths.ToArray();
+            expandedPaths.Add(folder.FullPath);
         }
 
-        private static void CollectExpandedPaths(ProjectFolder folder, List<string> expandedPaths)
+        foreach (var child in folder.Children)
         {
-            if (folder.IsExpanded)
+            if (child is ProjectFolder childFolder)
             {
-                expandedPaths.Add(folder.FullPath);
-            }
-
-            foreach (var child in folder.Children)
-            {
-                if (child is ProjectFolder childFolder)
-                {
-                    CollectExpandedPaths(childFolder, expandedPaths);
-                }
+                CollectExpandedPaths(childFolder, expandedPaths);
             }
         }
+    }
 
-        public static void RestoreExpandedState(this ProjectFolder rootFolder, string[] expandedPaths)
+    public static void RestoreExpandedState(this ProjectFolder rootFolder, string[] expandedPaths)
+    {
+        if (expandedPaths == null || expandedPaths.Length == 0)
         {
-            if (expandedPaths == null || expandedPaths.Length == 0)
-            {
-                return;
-            }
-
-            var expandedPathsSet = new HashSet<string>(expandedPaths);
-            RestoreExpandedStateRecursive(rootFolder, expandedPathsSet);
+            return;
         }
 
-        private static void RestoreExpandedStateRecursive(ProjectFolder folder, HashSet<string> expandedPaths)
-        {
-            folder.IsExpanded = expandedPaths.Contains(folder.FullPath);
+        var expandedPathsSet = new HashSet<string>(expandedPaths);
+        RestoreExpandedStateRecursive(rootFolder, expandedPathsSet);
+    }
 
-            foreach (var child in folder.Children)
+    private static void RestoreExpandedStateRecursive(ProjectFolder folder, HashSet<string> expandedPaths)
+    {
+        folder.IsExpanded = expandedPaths.Contains(folder.FullPath);
+
+        foreach (var child in folder.Children)
+        {
+            if (child is ProjectFolder childFolder)
             {
-                if (child is ProjectFolder childFolder)
-                {
-                    RestoreExpandedStateRecursive(childFolder, expandedPaths);
-                }
+                RestoreExpandedStateRecursive(childFolder, expandedPaths);
             }
         }
     }

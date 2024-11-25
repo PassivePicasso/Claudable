@@ -1,9 +1,7 @@
-﻿namespace Claudable.Models
+﻿namespace Claudable.Models;
+public enum FilterMode
 {
-    public enum FilterMode
-    {
-        ShowAll,
-        ShowOnlyTrackedArtifacts,
-        ShowOnlyOutdatedFiles
-    }
+    ShowAll,
+    ShowOnlyTrackedArtifacts,
+    ShowOnlyOutdatedFiles
 }

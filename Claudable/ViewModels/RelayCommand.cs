@@ -1,47 +1,46 @@
 ﻿using System.Windows.Input;
 
-namespace Claudable.ViewModels
+namespace Claudable.ViewModels;
+
+public class RelayCommand : ICommand
 {
-    public class RelayCommand : ICommand
+    private readonly Action _execute;
+    private readonly Func<bool> _canExecute;
+
+    public RelayCommand(Action execute, Func<bool> canExecute = null)
     {
-        private readonly Action _execute;
-        private readonly Func<bool> _canExecute;
-
-        public RelayCommand(Action execute, Func<bool> canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-
-        public bool CanExecute(object parameter) => _canExecute == null || _canExecute();
-
-        public void Execute(object parameter) => _execute();
+        _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        _canExecute = canExecute;
     }
-    public class RelayCommand<T> : ICommand
+
+    public event EventHandler CanExecuteChanged
     {
-        private readonly Action<T> _execute;
-        private readonly Func<T, bool> _canExecute;
+        add { CommandManager.RequerySuggested += value; }
+        remove { CommandManager.RequerySuggested -= value; }
+    }
 
-        public RelayCommand(Action<T> execute, Func<T, bool> canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
+    public bool CanExecute(object parameter) => _canExecute == null || _canExecute();
 
-        public bool CanExecute(object parameter) => _canExecute == null || _canExecute((T)parameter);
+    public void Execute(object parameter) => _execute();
+}
+public class RelayCommand<T> : ICommand
+{
+    private readonly Action<T> _execute;
+    private readonly Func<T, bool> _canExecute;
 
-        public void Execute(object parameter) => _execute((T)parameter);
+    public RelayCommand(Action<T> execute, Func<T, bool> canExecute = null)
+    {
+        _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        _canExecute = canExecute;
+    }
 
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
+    public bool CanExecute(object parameter) => _canExecute == null || _canExecute((T)parameter);
+
+    public void Execute(object parameter) => _execute((T)parameter);
+
+    public event EventHandler CanExecuteChanged
+    {
+        add { CommandManager.RequerySuggested += value; }
+        remove { CommandManager.RequerySuggested -= value; }
     }
 }

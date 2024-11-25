@@ -8,118 +8,117 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace Claudable.ViewModels
+namespace Claudable.ViewModels;
+
+public class SvgArtifactViewModel : INotifyPropertyChanged
 {
-    public class SvgArtifactViewModel : INotifyPropertyChanged
+    private string _name;
+    private string _content;
+    private string _uuid;
+    private ImageSource _renderedImage;
+
+    public string Name
     {
-        private string _name;
-        private string _content;
-        private string _uuid;
-        private ImageSource _renderedImage;
+        get => _name;
+        set { _name = value; OnPropertyChanged(); }
+    }
 
-        public string Name
+    public string Content
+    {
+        get => _content;
+        set
         {
-            get => _name;
-            set { _name = value; OnPropertyChanged(); }
+            _content = value;
+            OnPropertyChanged();
+            RenderSvg();
+        }
+    }
+
+    public string Uuid
+    {
+        get => _uuid;
+        set { _uuid = value; OnPropertyChanged(); }
+    }
+
+    public ImageSource RenderedImage
+    {
+        get => _renderedImage;
+        set { _renderedImage = value; OnPropertyChanged(); }
+    }
+
+    public ICommand SaveAsPngCommand { get; }
+    public ICommand SaveAsIcoCommand { get; }
+
+    public SvgArtifactViewModel()
+    {
+        SaveAsPngCommand = new RelayCommand(SaveAsPng);
+        SaveAsIcoCommand = new RelayCommand(SaveAsIco);
+    }
+
+    private void RenderSvg()
+    {
+        if (string.IsNullOrEmpty(Content))
+        {
+            return;
         }
 
-        public string Content
+        try
         {
-            get => _content;
-            set
+            using (var svg = new SKSvg())
             {
-                _content = value;
-                OnPropertyChanged();
-                RenderSvg();
-            }
-        }
+                svg.FromSvg(Content);
 
-        public string Uuid
-        {
-            get => _uuid;
-            set { _uuid = value; OnPropertyChanged(); }
-        }
+                int width = (int)svg.Picture.CullRect.Width;
+                int height = (int)svg.Picture.CullRect.Height;
 
-        public ImageSource RenderedImage
-        {
-            get => _renderedImage;
-            set { _renderedImage = value; OnPropertyChanged(); }
-        }
-
-        public ICommand SaveAsPngCommand { get; }
-        public ICommand SaveAsIcoCommand { get; }
-
-        public SvgArtifactViewModel()
-        {
-            SaveAsPngCommand = new RelayCommand(SaveAsPng);
-            SaveAsIcoCommand = new RelayCommand(SaveAsIco);
-        }
-
-        private void RenderSvg()
-        {
-            if (string.IsNullOrEmpty(Content))
-            {
-                return;
-            }
-
-            try
-            {
-                using (var svg = new SKSvg())
+                using (var surface = SKSurface.Create(new SKImageInfo(width, height)))
                 {
-                    svg.FromSvg(Content);
+                    var canvas = surface.Canvas;
+                    canvas.Clear(SKColors.Transparent);
+                    canvas.DrawPicture(svg.Picture);
 
-                    int width = (int)svg.Picture.CullRect.Width;
-                    int height = (int)svg.Picture.CullRect.Height;
-
-                    using (var surface = SKSurface.Create(new SKImageInfo(width, height)))
+                    using (var image = surface.Snapshot())
+                    using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
                     {
-                        var canvas = surface.Canvas;
-                        canvas.Clear(SKColors.Transparent);
-                        canvas.DrawPicture(svg.Picture);
+                        var stream = new MemoryStream(data.ToArray());
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.StreamSource = stream;
+                        bitmap.EndInit();
+                        bitmap.Freeze();
 
-                        using (var image = surface.Snapshot())
-                        using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
-                        {
-                            var stream = new MemoryStream(data.ToArray());
-                            var bitmap = new BitmapImage();
-                            bitmap.BeginInit();
-                            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                            bitmap.StreamSource = stream;
-                            bitmap.EndInit();
-                            bitmap.Freeze();
-
-                            RenderedImage = bitmap;
-                        }
+                        RenderedImage = bitmap;
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error rendering SVG: {ex.Message}");
-                // Set a placeholder image or show an error image
-                RenderedImage = new BitmapImage(new Uri("/Resources/error_placeholder.png", UriKind.Relative));
-            }
         }
-
-        private void SaveAsPng()
+        catch (Exception ex)
         {
-            string outputPath = $"{Name}.png";
-            SVGRasterizer.GenerateArtifactIcon(outputPath, Content);
-            // Implement saving logic here
+            Console.WriteLine($"Error rendering SVG: {ex.Message}");
+            // Set a placeholder image or show an error image
+            RenderedImage = new BitmapImage(new Uri("/Resources/error_placeholder.png", UriKind.Relative));
         }
+    }
 
-        private void SaveAsIco()
-        {
-            string outputPath = $"{Name}.ico";
-            SVGRasterizer.GenerateArtifactIcon(outputPath, Content, true);
-            // Implement saving logic here
-        }
+    private void SaveAsPng()
+    {
+        string outputPath = $"{Name}.png";
+        SVGRasterizer.GenerateArtifactIcon(outputPath, Content);
+        // Implement saving logic here
+    }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+    private void SaveAsIco()
+    {
+        string outputPath = $"{Name}.ico";
+        SVGRasterizer.GenerateArtifactIcon(outputPath, Content, true);
+        // Implement saving logic here
+    }
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

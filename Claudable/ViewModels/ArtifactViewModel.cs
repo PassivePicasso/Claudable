@@ -3,112 +3,111 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace Claudable.ViewModels
+namespace Claudable.ViewModels;
+
+public class ArtifactViewModel : INotifyPropertyChanged
 {
-    public class ArtifactViewModel : INotifyPropertyChanged
+    private string _fileName;
+    private string uuid;
+    private string content;
+    private DateTime createdAt;
+    private string projectUuid;
+    private ProjectFile _projectFile;
+
+    [JsonProperty("file_name")]
+    public string FileName
     {
-        private string _fileName;
-        private string uuid;
-        private string content;
-        private DateTime createdAt;
-        private string projectUuid;
-        private ProjectFile _projectFile;
-
-        [JsonProperty("file_name")]
-        public string FileName
+        get => _fileName;
+        set
         {
-            get => _fileName;
-            set
-            {
-                _fileName = value;
-                OnPropertyChanged();
-            }
+            _fileName = value;
+            OnPropertyChanged();
         }
+    }
 
-        [JsonProperty("uuid")]
-        public string Uuid
+    [JsonProperty("uuid")]
+    public string Uuid
+    {
+        get => uuid;
+        set
         {
-            get => uuid;
-            set
-            {
-                uuid = value;
-                OnPropertyChanged();
-            }
+            uuid = value;
+            OnPropertyChanged();
         }
+    }
 
-        [JsonProperty("content")]
-        public string Content
+    [JsonProperty("content")]
+    public string Content
+    {
+        get => content;
+        set
         {
-            get => content;
-            set
-            {
-                content = value;
-                OnPropertyChanged();
-            }
+            content = value;
+            OnPropertyChanged();
         }
+    }
 
-        [JsonProperty("created_at")]
-        public DateTime CreatedAt
+    [JsonProperty("created_at")]
+    public DateTime CreatedAt
+    {
+        get => createdAt;
+        set
         {
-            get => createdAt;
-            set
-            {
-                createdAt = value;
-                OnPropertyChanged();
-            }
+            createdAt = value;
+            OnPropertyChanged();
         }
+    }
 
-        [JsonProperty("project_uuid")]
-        public string ProjectUuid
+    [JsonProperty("project_uuid")]
+    public string ProjectUuid
+    {
+        get => projectUuid;
+        set
         {
-            get => projectUuid;
-            set
-            {
-                projectUuid = value;
-                OnPropertyChanged();
-            }
+            projectUuid = value;
+            OnPropertyChanged();
         }
+    }
 
-        [JsonIgnore]
-        public bool HasLocalFile => ProjectFile != null;
+    [JsonIgnore]
+    public bool HasLocalFile => ProjectFile != null;
 
-        [JsonIgnore]
-        public ProjectFile ProjectFile
+    [JsonIgnore]
+    public ProjectFile ProjectFile
+    {
+        get => _projectFile;
+        set
         {
-            get => _projectFile;
-            set
-            {
-                _projectFile = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasLocalFile));
-            }
+            _projectFile = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasLocalFile));
         }
-        public ICommand UntrackArtifactCommand { get; private set; }
+    }
+    public ICommand UntrackArtifactCommand { get; private set; }
 
-        public ArtifactViewModel()
+    public ArtifactViewModel()
+    {
+        UntrackArtifactCommand = new RelayCommand(UntrackArtifact);
+    }
+    public async void UntrackArtifact()
+    {
+        try
         {
-            UntrackArtifactCommand = new RelayCommand(UntrackArtifact);
+            if (ProjectFile != null)
+                ProjectFile.UntrackArtifact();
+            else
+                await WebViewManager.Instance.DeleteArtifact(this);
         }
-        public async void UntrackArtifact()
+        catch (Exception ex)
         {
-            try
-            {
-                if (ProjectFile != null)
-                    ProjectFile.UntrackArtifact();
-                else
-                    await WebViewManager.Instance.DeleteArtifact(this);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error untracking artifact: {ex.Message}");
-            }
+            System.Diagnostics.Debug.WriteLine($"Error untracking artifact: {ex.Message}");
         }
+    }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+    protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

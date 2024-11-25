@@ -1,30 +1,29 @@
+using Microsoft.Xaml.Behaviors;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Xaml.Behaviors;
 
-namespace Claudable.Behaviors
+namespace Claudable.Behaviors;
+
+public class FocusOnVisibleBehavior : Behavior<TextBox>
 {
-    public class FocusOnVisibleBehavior : Behavior<TextBox>
+    protected override void OnAttached()
     {
-        protected override void OnAttached()
-        {
-            base.OnAttached();
-            AssociatedObject.IsVisibleChanged += OnVisibleChanged;
-        }
+        base.OnAttached();
+        AssociatedObject.IsVisibleChanged += OnVisibleChanged;
+    }
 
-        protected override void OnDetaching()
-        {
-            AssociatedObject.IsVisibleChanged -= OnVisibleChanged;
-            base.OnDetaching();
-        }
+    protected override void OnDetaching()
+    {
+        AssociatedObject.IsVisibleChanged -= OnVisibleChanged;
+        base.OnDetaching();
+    }
 
-        private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if ((bool)e.NewValue)
         {
-            if ((bool)e.NewValue)
-            {
-                AssociatedObject.Focus();
-                AssociatedObject.SelectAll();
-            }
+            AssociatedObject.Focus();
+            AssociatedObject.SelectAll();
         }
     }
 }

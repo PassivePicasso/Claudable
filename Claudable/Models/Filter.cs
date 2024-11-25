@@ -1,17 +1,14 @@
-﻿namespace Claudable.Models
+﻿namespace Claudable.Models;
+using ViewModels;
+
+public class Filter
 {
-    using System.Text.Json.Serialization;
-    using ViewModels;
-
-    public class Filter
+    public Filter(string filterValue)
     {
-        public Filter(string filterValue)
-        {
-            Value = filterValue;
-        }
-
-        public string Value { get; set; }
-    
-        public bool ShouldPrependProjectFolder => FilterViewModel.FolderChar.Contains(Value[0]);
+        Value = filterValue;
     }
+
+    public string Value { get; set; }
+
+    public bool ShouldPrependProjectFolder => FilterViewModel.FolderChar.Contains(Value[0]);
 }
