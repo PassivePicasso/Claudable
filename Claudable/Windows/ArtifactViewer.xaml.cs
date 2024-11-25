@@ -6,13 +6,14 @@ using System.Windows;
 
 namespace Claudable.Windows;
 
-public partial class ArtifactViewer : Window
+public partial class ArtifactViewer : Window, IDisposable
 {
     private readonly ArtifactViewerOptions _options;
     private bool _isRendered = true;
     private bool _isLineNumbersEnabled = true;
     private bool _isWrapEnabled = false;
     private readonly string _detectedLanguage;
+    private bool _isDisposed;
 
     public ArtifactViewer(ArtifactViewerOptions options)
     {
@@ -20,6 +21,7 @@ public partial class ArtifactViewer : Window
         _options = options;
         _detectedLanguage = DetectLanguage();
         Loaded += ArtifactViewer_Loaded;
+        Closed += ArtifactViewer_Closed;
     }
 
     private async void ArtifactViewer_Loaded(object sender, RoutedEventArgs e)
@@ -27,6 +29,34 @@ public partial class ArtifactViewer : Window
         await WebViewFactory.InitializeWebView(ContentViewer);
         ContentViewer.CoreWebView2.WebMessageReceived += HandleWebMessage;
         DisplayContent();
+    }
+
+    private void ArtifactViewer_Closed(object sender, EventArgs e)
+    {
+        Dispose();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_isDisposed)
+        {
+            if (disposing)
+            {
+                // Cleanup managed resources
+                if (ContentViewer?.CoreWebView2 != null)
+                    ContentViewer.CoreWebView2.WebMessageReceived -= HandleWebMessage;
+                
+                ContentViewer?.Dispose();
+            }
+
+            _isDisposed = true;
+        }
     }
 
     private void HandleWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)

@@ -4,12 +4,13 @@ using System.IO;
 using System.Windows;
 
 namespace Claudable.Windows;
-public partial class DiffViewer : Window
+public partial class DiffViewer : Window, IDisposable
 {
     private readonly ProjectFile _projectFile;
     private readonly string _localContent;
     private readonly string _artifactContent;
     private readonly bool _isLocalNewer;
+    private bool _isDisposed;
 
     public static async Task ShowDiffDialog(ProjectFile projectFile)
     {
@@ -38,8 +39,30 @@ public partial class DiffViewer : Window
 
         UpdateHeader();
         Loaded += DiffViewer_Loaded;
+        Closed += DiffViewer_Closed;
     }
 
+    private void DiffViewer_Closed(object? sender, EventArgs e)
+    {
+        Dispose();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_isDisposed)
+        {
+            if (disposing)
+                DiffWebViewer?.Dispose();
+
+            _isDisposed = true;
+        }
+    }
     private void UpdateHeader()
     {
         FileNameText.Text = $"Comparing versions of: {_projectFile.Name}";
