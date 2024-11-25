@@ -1,119 +1,109 @@
-﻿using Microsoft.Web.WebView2.Core;
+﻿using Claudable.Models;
+using Claudable.Services;
+using Microsoft.Web.WebView2.Core;
 using System.IO;
 using System.Windows;
 
-namespace Claudable.Windows
+namespace Claudable.Windows;
+
+public partial class ArtifactViewer : Window
 {
-    public partial class ArtifactViewer : Window
+    private readonly ArtifactViewerOptions _options;
+    private bool _isRendered = true;
+    private bool _isLineNumbersEnabled = true;
+    private bool _isWrapEnabled = false;
+    private readonly string _detectedLanguage;
+
+    public ArtifactViewer(ArtifactViewerOptions options)
     {
-        private ArtifactViewerOptions _options;
-        private bool _isRendered = true;
-        private bool _isLineNumbersEnabled = true;
-        private bool _isWrapEnabled = false;
-        private string _detectedLanguage;
+        InitializeComponent();
+        _options = options;
+        _detectedLanguage = DetectLanguage();
+        Loaded += ArtifactViewer_Loaded;
+    }
 
-        public ArtifactViewer(ArtifactViewerOptions options)
+    private async void ArtifactViewer_Loaded(object sender, RoutedEventArgs e)
+    {
+        await WebViewFactory.InitializeWebView(ContentViewer);
+        ContentViewer.CoreWebView2.WebMessageReceived += HandleWebMessage;
+        DisplayContent();
+    }
+
+    private void HandleWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        var message = e.WebMessageAsJson;
+        try
         {
-            InitializeComponent();
-            _options = options;
-            _detectedLanguage = DetectLanguage();
-            Loaded += ArtifactViewer_Loaded;
-        }
-
-        private async void ArtifactViewer_Loaded(object sender, RoutedEventArgs e)
-        {
-            await InitializeWebView();
-            DisplayContent();
-        }
-
-        private async Task InitializeWebView()
-        {
-            var userDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Claudable",
-                "ArtifactViewerData");
-
-            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
-            await ContentViewer.EnsureCoreWebView2Async(env);
-
-            ContentViewer.CoreWebView2.WebMessageReceived += HandleWebMessage;
-        }
-
-        private void HandleWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
-        {
-            var message = e.WebMessageAsJson;
-            try
+            var command = System.Text.Json.JsonSerializer.Deserialize<ViewerCommand>(message);
+            switch (command.action)
             {
-                var command = System.Text.Json.JsonSerializer.Deserialize<ViewerCommand>(message);
-                switch (command.action)
-                {
-                    case "toggleRender":
-                        _isRendered = !_isRendered;
-                        DisplayContent();
-                        break;
-                    case "toggleLineNumbers":
-                        _isLineNumbersEnabled = !_isLineNumbersEnabled;
-                        DisplayContent();
-                        break;
-                    case "toggleWrap":
-                        _isWrapEnabled = !_isWrapEnabled;
-                        DisplayContent();
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error handling web message: {ex.Message}");
+                case "toggleRender":
+                    _isRendered = !_isRendered;
+                    DisplayContent();
+                    break;
+                case "toggleLineNumbers":
+                    _isLineNumbersEnabled = !_isLineNumbersEnabled;
+                    DisplayContent();
+                    break;
+                case "toggleWrap":
+                    _isWrapEnabled = !_isWrapEnabled;
+                    DisplayContent();
+                    break;
             }
         }
-
-        private string DetectLanguage()
+        catch (Exception ex)
         {
-            string extension = Path.GetExtension(_options.FileName).ToLowerInvariant();
-            return extension switch
-            {
-                ".cs" => "csharp",
-                ".js" => "javascript",
-                ".ts" => "typescript",
-                ".html" => "html",
-                ".css" => "css",
-                ".xml" or ".xaml" or ".axaml" or ".axml" or ".appxml" or
-                ".config" or ".csproj" or ".vbproj" or ".fsproj" or
-                ".build" or ".targets" or ".props" or ".rdl" or
-                ".settings" or ".manifest" or ".resx" or ".ruleset" or
-                ".vstemplate" or ".vsixmanifest" or ".nuspec" or
-                ".msbuild" or ".xsd" or ".wsdl" or ".soap" or ".svg" => "xml",
-                ".json" => "json",
-                ".md" or ".markdown" => "markdown",
-                ".py" => "python",
-                ".rb" => "ruby",
-                ".java" => "java",
-                ".cpp" or ".hpp" => "cpp",
-                ".h" => "cpp",
-                ".sql" => "sql",
-                ".sh" => "bash",
-                ".yaml" or ".yml" => "yaml",
-                ".php" => "php",
-                ".rs" => "rust",
-                ".go" => "go",
-                ".swift" => "swift",
-                ".mmd" or ".mermaid" => "mermaid",
-                _ => "plaintext"
-            };
+            System.Diagnostics.Debug.WriteLine($"Error handling web message: {ex.Message}");
         }
+    }
 
-        private bool IsMarkdown => _detectedLanguage == "markdown";
-        private bool IsMermaid => _detectedLanguage == "mermaid";
-
-        private void DisplayContent()
+    private string DetectLanguage()
+    {
+        string extension = Path.GetExtension(_options.FileName).ToLowerInvariant();
+        return extension switch
         {
-            string htmlContent = GetHtmlContent();
-            ContentViewer.NavigateToString(htmlContent);
-        }
+            ".cs" => "csharp",
+            ".js" => "javascript",
+            ".ts" => "typescript",
+            ".html" => "html",
+            ".css" => "css",
+            ".xml" or ".xaml" or ".axaml" or ".axml" or ".appxml" or
+            ".config" or ".csproj" or ".vbproj" or ".fsproj" or
+            ".build" or ".targets" or ".props" or ".rdl" or
+            ".settings" or ".manifest" or ".resx" or ".ruleset" or
+            ".vstemplate" or ".vsixmanifest" or ".nuspec" or
+            ".msbuild" or ".xsd" or ".wsdl" or ".soap" or ".svg" => "xml",
+            ".json" => "json",
+            ".md" or ".markdown" => "markdown",
+            ".py" => "python",
+            ".rb" => "ruby",
+            ".java" => "java",
+            ".cpp" or ".hpp" => "cpp",
+            ".h" => "cpp",
+            ".sql" => "sql",
+            ".sh" => "bash",
+            ".yaml" or ".yml" => "yaml",
+            ".php" => "php",
+            ".rs" => "rust",
+            ".go" => "go",
+            ".swift" => "swift",
+            ".mmd" or ".mermaid" => "mermaid",
+            _ => "plaintext"
+        };
+    }
 
-        private string GetHtmlContent()
-        {
-            return $@"
+    private bool IsMarkdown => _detectedLanguage == "markdown";
+    private bool IsMermaid => _detectedLanguage == "mermaid";
+
+    private void DisplayContent()
+    {
+        string htmlContent = GetHtmlContent();
+        ContentViewer.NavigateToString(htmlContent);
+    }
+
+    private string GetHtmlContent()
+    {
+        return $@"
 <!DOCTYPE html>
 <html>
 <head>
@@ -140,24 +130,24 @@ namespace Claudable.Windows
     </script>
 </body>
 </html>";
-        }
+    }
 
-        private string GetLanguageScripts()
+    private string GetLanguageScripts()
+    {
+        var languages = new[]
         {
-            var languages = new[]
-            {
-                "xml", "csharp", "javascript", "typescript", "css", "json", "markdown",
-                "python", "ruby", "java", "cpp", "sql", "yaml", "bash", "php",
-                "rust", "go", "swift"
-            };
+            "xml", "csharp", "javascript", "typescript", "css", "json", "markdown",
+            "python", "ruby", "java", "cpp", "sql", "yaml", "bash", "php",
+            "rust", "go", "swift"
+        };
 
-            return string.Join("\n", languages.Select(lang =>
-                $"<script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/{lang}.min.js'></script>"));
-        }
+        return string.Join("\n", languages.Select(lang =>
+            $"<script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/{lang}.min.js'></script>"));
+    }
 
-        private string GetStyles()
-        {
-            return @"
+    private string GetStyles()
+    {
+        return @"
                 :root {
                     --claude-bg: #2d2d2a;
                     --claude-primary: #1a1915;
@@ -243,61 +233,61 @@ namespace Claudable.Windows
                 .mermaid {
                     background: var(--claude-bg);
                 }";
+    }
+
+    private string GetToolbarButtons()
+    {
+        var buttons = new List<string>();
+
+        if (IsMarkdown)
+        {
+            buttons.Add($@"<button class='toolbar-button{(_isRendered ? " active" : "")}' onclick='toggleRender()'>
+                              {(_isRendered ? "Show Source" : "Show Rendered")}</button>");
         }
 
-        private string GetToolbarButtons()
-        {
-            var buttons = new List<string>();
+        if ((IsMarkdown || IsMermaid) && _isRendered)
+            return string.Join("\n", buttons);
 
-            if (IsMarkdown)
-            {
-                buttons.Add($@"<button class='toolbar-button{(_isRendered ? " active" : "")}' onclick='toggleRender()'>
-                              {(_isRendered ? "Show Source" : "Show Rendered")}</button>");
-            }
-
-            if ((IsMarkdown || IsMermaid) && _isRendered)
-                return string.Join("\n", buttons);
-
-            buttons.Add($@"<button class='toolbar-button{(_isLineNumbersEnabled ? " active" : "")}' onclick='toggleLineNumbers()'>
+        buttons.Add($@"<button class='toolbar-button{(_isLineNumbersEnabled ? " active" : "")}' onclick='toggleLineNumbers()'>
                           {(_isLineNumbersEnabled ? "Hide Line Numbers" : "Show Line Numbers")}</button>");
 
-            buttons.Add($@"<button class='toolbar-button{(_isWrapEnabled ? " active" : "")}' onclick='toggleWrap()'>
+        buttons.Add($@"<button class='toolbar-button{(_isWrapEnabled ? " active" : "")}' onclick='toggleWrap()'>
                           {(_isWrapEnabled ? "Disable Wrap" : "Enable Wrap")}</button>");
 
-            return string.Join("\n", buttons);
-        }
+        return string.Join("\n", buttons);
+    }
 
-        private string GetContentClasses()
+    private string GetContentClasses()
+    {
+        var classes = new List<string>();
+
+        if (_isLineNumbersEnabled) classes.Add("line-numbers");
+        if (_isWrapEnabled) classes.Add("wrap");
+        else classes.Add("nowrap");
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetInitialContent()
+    {
+        if (IsMermaid && _isRendered)
         {
-            var classes = new List<string>();
-
-            if (_isLineNumbersEnabled) classes.Add("line-numbers");
-            if (_isWrapEnabled) classes.Add("wrap");
-            else classes.Add("nowrap");
-
-            return string.Join(" ", classes);
+            return $@"<pre class='mermaid'>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</pre>";
         }
-
-        private string GetInitialContent()
+        else if (IsMarkdown && _isRendered)
         {
-            if (IsMermaid && _isRendered)
-            {
-                return $@"<pre class='mermaid'>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</pre>";
-            }
-            else if (IsMarkdown && _isRendered)
-            {
-                return "<div id='markdown-content'></div>";
-            }
-            else
-            {
-                string languageClass = !string.IsNullOrEmpty(_detectedLanguage) ? $"class=\"language-{_detectedLanguage}\"" : "";
-                return $"<pre><code {languageClass}>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</code></pre>";
-            }
+            return "<div id='markdown-content'></div>";
         }
-
-        private string GetJavaScript()
+        else
         {
-            return $@"
+            string languageClass = !string.IsNullOrEmpty(_detectedLanguage) ? $"class=\"language-{_detectedLanguage}\"" : "";
+            return $"<pre><code {languageClass}>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</code></pre>";
+        }
+    }
+
+    private string GetJavaScript()
+    {
+        return $@"
                 const sendMessage = (action) => {{
                     window.chrome.webview.postMessage({{ action }});
                 }};
@@ -360,18 +350,5 @@ namespace Claudable.Windows
                         initHighlight();
                     }}
                 }});";
-        }
-    }
-
-    public class ArtifactViewerOptions
-    {
-        public string Title { get; set; }
-        public string Content { get; set; }
-        public string FileName { get; set; }
-    }
-
-    public class ViewerCommand
-    {
-        public string action { get; set; }
     }
 }
