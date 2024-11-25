@@ -1,7 +1,6 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using System.IO;
 using System.Windows;
-using System.Windows.Input;
 
 namespace Claudable.Windows
 {
@@ -37,14 +36,12 @@ namespace Claudable.Windows
             var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
             await ContentViewer.EnsureCoreWebView2Async(env);
 
-            // Set up message handling for toggle commands
             ContentViewer.CoreWebView2.WebMessageReceived += HandleWebMessage;
         }
 
         private void HandleWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             var message = e.WebMessageAsJson;
-            // Handle toggle messages from the web view
             try
             {
                 var command = System.Text.Json.JsonSerializer.Deserialize<ViewerCommand>(message);
@@ -100,11 +97,13 @@ namespace Claudable.Windows
                 ".rs" => "rust",
                 ".go" => "go",
                 ".swift" => "swift",
+                ".mmd" or ".mermaid" => "mermaid",
                 _ => "plaintext"
             };
         }
 
         private bool IsMarkdown => _detectedLanguage == "markdown";
+        private bool IsMermaid => _detectedLanguage == "mermaid";
 
         private void DisplayContent()
         {
@@ -123,6 +122,7 @@ namespace Claudable.Windows
     <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.2/markdown-it.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js'></script>
     {GetLanguageScripts()}
     <style>
         {GetStyles()}
@@ -211,7 +211,6 @@ namespace Claudable.Windows
                     background-color: var(--claude-primary) !important;
                     margin: 0;
                     margin: -26px;
-
                 }
                 .nowrap pre code {
                     white-space: pre;
@@ -236,10 +235,13 @@ namespace Claudable.Windows
                     border-right: 1px solid var(--claude-border);
                     min-width: 1.5em;
                     text-align: right;
-                    -webkit-user-select: none; /* Chrome/Safari */ 
-                    -moz-user-select: none; /* Firefox */
-                    -ms-user-select: none; /* Internet Explorer/Edge */
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
                     user-select: none;
+                }
+                .mermaid {
+                    background: var(--claude-bg);
                 }";
         }
 
@@ -253,12 +255,11 @@ namespace Claudable.Windows
                               {(_isRendered ? "Show Source" : "Show Rendered")}</button>");
             }
 
-            if (IsMarkdown ? _isRendered : false)
+            if ((IsMarkdown || IsMermaid) && _isRendered)
                 return string.Join("\n", buttons);
 
             buttons.Add($@"<button class='toolbar-button{(_isLineNumbersEnabled ? " active" : "")}' onclick='toggleLineNumbers()'>
                           {(_isLineNumbersEnabled ? "Hide Line Numbers" : "Show Line Numbers")}</button>");
-
 
             buttons.Add($@"<button class='toolbar-button{(_isWrapEnabled ? " active" : "")}' onclick='toggleWrap()'>
                           {(_isWrapEnabled ? "Disable Wrap" : "Enable Wrap")}</button>");
@@ -279,7 +280,11 @@ namespace Claudable.Windows
 
         private string GetInitialContent()
         {
-            if (IsMarkdown && _isRendered)
+            if (IsMermaid && _isRendered)
+            {
+                return $@"<pre class='mermaid'>{System.Web.HttpUtility.HtmlEncode(_options.Content)}</pre>";
+            }
+            else if (IsMarkdown && _isRendered)
             {
                 return "<div id='markdown-content'></div>";
             }
@@ -300,6 +305,14 @@ namespace Claudable.Windows
                 const toggleRender = () => sendMessage('toggleRender');
                 const toggleLineNumbers = () => sendMessage('toggleLineNumbers');
                 const toggleWrap = () => sendMessage('toggleWrap');
+
+                const initMermaid = () => {{
+                    mermaid.initialize({{ 
+                        theme: 'dark',
+                        darkMode: true,
+                        background: '#2d2d2a'
+                    }});
+                }};
 
                 const initMarkdown = () => {{
                     const md = window.markdownit({{
@@ -329,18 +342,19 @@ namespace Claudable.Windows
                             hljs.highlightElement(block);
                         }}
 
-                        // Add line number spans
                         const lines = block.innerHTML.split('\n');
                         block.innerHTML = lines.map(line => `<span>${{line}}</span>`).join('\n');
                     }});
                 }};
 
-                // Initialize based on content type
                 window.addEventListener('DOMContentLoaded', () => {{
+                    const isMermaid = {(IsMermaid ? "true" : "false")};
                     const isMarkdown = {(IsMarkdown ? "true" : "false")};
                     const isRendered = {(_isRendered ? "true" : "false")};
                     
-                    if (isMarkdown && isRendered) {{
+                    if (isMermaid && isRendered) {{
+                        initMermaid();
+                    }} else if (isMarkdown && isRendered) {{
                         initMarkdown();
                     }} else {{
                         initHighlight();
