@@ -5,8 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Claudable.ViewModels"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:controls="clr-namespace:Claudable.Controls"
+        xmlns:models="clr-namespace:Claudable.Models"
+        xmlns:viewmodels="clr-namespace:Claudable.ViewModels"
         mc:Ignorable="d"
-        Title="Claudable" Height="600" Width="1000">
+        Title="Claudable" Height="600" Width="1000"
+        d:DataContext="{d:DesignInstance {x:Type viewmodels:MainViewModel}}">
 
     <Window.DataContext>
         <vm:MainViewModel/>
@@ -248,6 +252,11 @@
                                                  ItemTemplate="{StaticResource TrackedArtifact}"/>
                                     </Grid>
                                 </TabItem>
+
+                                <TabItem Header="Tools">
+                                    <controls:ToolsView DataContext="{Binding Tools}"/>
+                                </TabItem>
+
                             </TabControl>
                         </Grid>
 

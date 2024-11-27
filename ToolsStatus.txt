@@ -1,0 +1,42 @@
+# Claudable Tool System Implementation Log
+
+## Focus
+Creating a system in Claudable that enables React/TSX components created in Claude conversations to be cached locally and run as standalone tools within Claudable, preserving their full functionality including imports, dependencies, and styling.
+
+## Status
+- Basic infrastructure is in place (Tool model, ToolManager, ToolWindow)
+- Can create and store tools locally
+- UI for managing tools exists
+- Initial attempts at rendering tools are encountering module/import issues
+- Current blocker is properly handling module imports in the WebView2 environment
+
+## Goals
+1. Allow TSX components created in Claude to be saved as reusable tools
+2. Launch tools in separate windows using WebView2
+3. Support full React functionality including:
+   - Module imports/exports
+   - React hooks
+   - Lucide icons
+   - Tailwind styling
+   - shadcn/ui components
+4. Maintain component portability without modification
+5. Enable tool state persistence
+6. Support communication between tools and Claudable
+
+## Current Issues
+Need to identify again
+
+## Key Files
+- ToolWindow.xaml and ToolWindow.xaml.cs - WebView2 host for tools
+- Tool.cs - Model for cached tools
+- ToolManager.cs - Service managing tool storage/loading
+- Tools tab in MainWindow.xaml
+- ToolViewModel.cs - To be described
+
+## Implementation Notes
+- Tools are stored as JSON files with UUID identifiers
+- Using WebView2 for rendering
+- Need to maintain compatibility with Claude's React component system
+- Must support the same libraries available in Claude's environment
+
+This is a core feature for Claudable that enables reuse of components created in Claude conversations as standalone tools within the application.

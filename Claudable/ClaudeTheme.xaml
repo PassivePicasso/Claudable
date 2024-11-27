@@ -4,6 +4,7 @@
                     xmlns:claudable="clr-namespace:Claudable"
                     xmlns:controls="clr-namespace:Claudable.Controls"
                     xmlns:converters="clr-namespace:Claudable.Converters"
+                    xmlns:tsconverters="clr-namespace:Claudable.ToolSystem.Converters"
                     xmlns:models="clr-namespace:Claudable.Models"
                     xmlns:vm="clr-namespace:Claudable.ViewModels" xmlns:behaviors="clr-namespace:Claudable.Behaviors">
 
@@ -14,7 +15,9 @@
     <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter"/>
     <converters:ChooseConverter x:Key="UploadOrDownload" True="↑" False="↓"/>
     <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
-
+    <tsconverters:OpenStateConverter x:Key="OpenStateConverter"/>
+    <tsconverters:IsReactComponentConverter x:Key="IsReactComponentConverter"/>
+    
     <!-- Colors -->
     <Color x:Key="ClaudePrimaryColor">#1a1915</Color>
     <Color x:Key="ClaudeSecondaryColor">#2f2f2c</Color>
@@ -690,8 +693,6 @@
 
                 <Button Content="Untrack" 
                         Command="{Binding UntrackArtifactCommand}"
-                        Visibility="{Binding IsTrackedAsArtifact, 
-                                   Converter={StaticResource BooleanToVisibilityConverter}}"
                         Style="{StaticResource SmallButtonStyle}"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Bottom"
@@ -724,6 +725,15 @@
                             Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"/>
+
+                    <Button Content="Cache Tool"
+                            Command="{Binding DataContext.CacheToolCommand, 
+                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"
+                            Style="{StaticResource SmallButtonStyle}"
+                            Visibility="{Binding FileName, Converter={StaticResource IsReactComponentConverter}}"
+                            HorizontalAlignment="Right"
+                            Margin="4,0,4,4"/>
                 </WrapPanel>
             </Grid>
         </Border>

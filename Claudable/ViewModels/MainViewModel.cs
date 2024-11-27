@@ -1,6 +1,7 @@
 using Claudable.Extensions;
 using Claudable.Models;
 using Claudable.Services;
+using Claudable.ToolSystem.ViewModels;
 using Claudable.Utilities;
 using Claudable.Windows;
 using Microsoft.Win32;
@@ -21,6 +22,7 @@ public class MainViewModel : INotifyPropertyChanged
     private FilterViewModel _filterViewModel;
     private DownloadManager _downloadManager;
     private ArtifactManager _artifactManager;
+    private ToolsViewModel _toolsViewModel;
     private bool _isPanelsSwapped;
     private int _selectedTabIndex;
     private FileWatcher _fileWatcher;
@@ -77,6 +79,15 @@ public class MainViewModel : INotifyPropertyChanged
         set
         {
             _downloadManager = value;
+            OnPropertyChanged();
+        }
+    }
+    public ToolsViewModel Tools
+    {
+        get => _toolsViewModel;
+        set
+        {
+            _toolsViewModel = value;
             OnPropertyChanged();
         }
     }
@@ -138,13 +149,14 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ViewProjectFileCommand { get; private set; }
     public ICommand CompareFilesCommand { get; }
     public ICommand CopyFileNameCommand { get; private set; }
-
+    public ICommand CacheToolCommand { get; }
     public MainViewModel()
     {
         FilterViewModel = new FilterViewModel();
         DownloadManager = new DownloadManager();
         ArtifactManager = new ArtifactManager();
         _projectAssociationService = new ProjectAssociationService();
+        Tools = new ToolsViewModel();
 
         SetProjectRootCommand = new RelayCommand(SetProjectRoot);
         SaveStateCommand = new RelayCommand(SaveState);
@@ -157,6 +169,12 @@ public class MainViewModel : INotifyPropertyChanged
         ViewProjectFileCommand = new RelayCommand<ProjectFile>(ViewProjectFile);
         CompareFilesCommand = new RelayCommand<ProjectFile>(async pf => await DiffViewer.ShowDiffDialog(pf));
         CopyFileNameCommand = new RelayCommand<ProjectFile>(pf => Clipboard.SetText(pf.Name));
+        CacheToolCommand = new RelayCommand<ArtifactViewModel>(CacheTool);
+    }
+
+    private async void CacheTool(ArtifactViewModel artifact)
+    {
+        await Tools.CacheTool(artifact);
     }
 
     private void ViewArtifact(ArtifactViewModel artifact)
