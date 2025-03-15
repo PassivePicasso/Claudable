@@ -142,7 +142,6 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand LoadStateCommand { get; private set; }
     public ICommand UpdateArtifactStatusCommand { get; private set; }
     public ICommand DropSvgArtifactCommand { get; private set; }
-    public ICommand DoubleClickTrackedArtifactCommand { get; private set; }
     public ICommand RefreshArtifactsCommand { get; private set; }
     public ICommand ViewArtifactCommand { get; private set; }
     public ICommand ViewProjectFileCommand { get; private set; }
@@ -162,7 +161,6 @@ public class MainViewModel : INotifyPropertyChanged
         LoadStateCommand = new RelayCommand(LoadState);
         UpdateArtifactStatusCommand = new RelayCommand(UpdateArtifactStatus);
         DropSvgArtifactCommand = new RelayCommand<object>(DropSvgArtifact);
-        DoubleClickTrackedArtifactCommand = new RelayCommand<ProjectFile>(OnDoubleClickTrackedArtifact);
         RefreshArtifactsCommand = new RelayCommand<ProjectFolder>(async pf => await RefreshFolderArtifacts(pf), pf => pf is ProjectFolder);
         ViewArtifactCommand = new RelayCommand<ArtifactViewModel>(ViewArtifact);
         ViewProjectFileCommand = new RelayCommand<ProjectFile>(ViewProjectFile);
@@ -238,14 +236,6 @@ public class MainViewModel : INotifyPropertyChanged
         viewer.Show();
     }
 
-    private void OnDoubleClickTrackedArtifact(ProjectFile projectFile)
-    {
-        if (projectFile?.AssociatedArtifact != null)
-        {
-            // Implement the logic to scroll to and highlight the corresponding item in the Project Knowledge section
-            //_ = WebViewManager.ScrollToProjectKnowledgeItem(projectFile.AssociatedArtifact.ProjectKnowledgeId);
-        }
-    }
     private void InitializeFileWatcher()
     {
         _fileWatcher?.Dispose();

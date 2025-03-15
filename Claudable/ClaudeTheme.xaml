@@ -542,9 +542,9 @@
             </Grid.ToolTip>
             <Grid.InputBindings>
                 <MouseBinding Gesture="LeftDoubleClick" 
-                             Command="{Binding DataContext.DoubleClickTrackedArtifactCommand, 
-                                       RelativeSource={RelativeSource AncestorType=Window}}"
-                             CommandParameter="{Binding}"/>
+                        Command="{Binding DataContext.ViewProjectFileCommand, 
+                                    RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}"/>
             </Grid.InputBindings>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="20"   />
