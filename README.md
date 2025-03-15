@@ -3,9 +3,9 @@
 Claudable is a desktop application designed to enhance the Claude AI experience by providing local file management and integration capabilities. This application serves as a bridge between Claude AI's web interface and your local file system, offering a seamless workflow for managing projects, artifacts, and downloads.
 
 ![Claudable Screenshot](Graphics/Screenshot2.png)
- 
+
 ## No association with Anthropic or Claude.ai
-I am an independent developer and this project has no association with claude.ai nor Anthropic.
+This project is developed independently and has no official association with Claude.ai or Anthropic.
 
 ## A Note about Embedded Web Browser Security
 Claudable, like other applications with embedded browsers, has full access to web content within its browser component. This includes the ability to execute JavaScript and interact with logged-in sessions. 
@@ -44,7 +44,6 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 ### 4. SVG Support
 - Export as PNG or ICO formats
 - Drag-and-drop SVG conversion
-- Automatic scaling and optimization
 
 ### 5. Download Management
 - Integrated download tracking
@@ -74,19 +73,19 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 
 ### 9. File Analysis
 - Built-in diff viewer with syntax highlighting
+- Artifact viewer with language detection
 - File modification tracking
 - Content comparison tools
 - Side-by-side diff view
 
-### 10. Smart Updates
-- Debounced file system monitoring
-- Batch update support
-- Efficient tree view virtualization
-- Automatic UI updates
+### 10. Conversation Export
+- Export conversations to text files
+- Preserve conversation structure
+- Include thinking summaries when available
 
 ## Technical Stack
 - **Framework**: WPF (Windows Presentation Foundation)
-- **Runtime**: .NET 8.0
+- **Runtime**: .NET (Targeting the latest version)
 - **Browser Component**: WebView2
 - **Key Libraries**:
   - SkiaSharp for graphics processing
@@ -95,6 +94,8 @@ The source code of Claudable is open and concise, allowing for easy review. If c
   - Win32 API integration for shell features
   - Monaco Editor for diff viewing
   - Highlight.js for syntax highlighting
+  - Markdown-it for Markdown rendering
+  - Mermaid for diagram rendering
 
 ## Getting Started
 
@@ -111,15 +112,16 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 
 ### First Run Setup
 1. Launch Claudable and wait for the Claude AI interface to load
-2. Navigate to your Claude AI project
-3. Click "Set Project Root" to select your local project folder
-4. The project structure will appear in the right panel
+2. Log in to your Claude AI account
+3. Navigate to your Claude AI project
+4. Click "Set Project Root" to select your local project folder
+5. The project structure will appear in the right panel
 
 ## Usage Guide
 
 ### Basic Navigation
-- Left panel: Claude AI interface
-- Right panel: Project management
+- Left panel: Claude AI interface (by default)
+- Right panel: Project management (by default)
 - Drag the splitter to adjust panel sizes
 - Use the swap button (↔) to switch panel positions
 
@@ -160,16 +162,23 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 - Double-click files to view content
 - Use Compare button for diff view
 - Right-click for Windows context menu
-- Drag files to Claude AI interface
+
+### Exporting Conversations
+- Use the "Export Conversation" button in the top bar
+- Save conversations as text files for later reference
+- All conversation content is preserved, including thinking steps
 
 ## Contributing
 Contributions are welcome! Please feel free to submit pull requests.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgements
 - Claude AI by Anthropic
-- Microsoft for WebView2 and Monaco Editor
+- Microsoft for WebView2, WPF, and Monaco Editor
 - SkiaSharp and SVG.Skia libraries
 - Highlight.js for syntax highlighting
+- Monaco Editor for diff viewing
+- Markdown-it for Markdown rendering
+- Mermaid for diagram support
