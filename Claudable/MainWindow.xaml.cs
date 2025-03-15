@@ -184,12 +184,12 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.Maximized)
         {
             WindowState = WindowState.Normal;
-            MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,0 H10 V10 H0 V0 M0,3 H7 V10 M3,0 V7");
+            MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,0 H10 V10 H0 V0 M0,3");
         }
         else
         {
             WindowState = WindowState.Maximized;
-            MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,3 H7 V10 H0 V3 M3,0 H10 V7 H3 V0");
+            MaximizeRestoreButtonPath.Data = Geometry.Parse("M0,3 H7 V10 H0 V3 M3,3 V0 H10 V7 H7");
         }
     }
     private void CloseButton_Click(object sender, RoutedEventArgs e)

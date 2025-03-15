@@ -13,7 +13,7 @@
     </Window.DataContext>
     <WindowChrome.WindowChrome>
         <WindowChrome 
-            CaptionHeight="32"
+            CaptionHeight="48"
             ResizeBorderThickness="5"
             GlassFrameThickness="32"
             CornerRadius="0"
@@ -32,24 +32,36 @@
             <Grid Grid.Row="0" Margin="6,6,6,0" Background="{StaticResource ClaudePrimaryBrush}" HorizontalAlignment="Stretch" ClipToBounds="False">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="52"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="10*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
+                <Border Grid.ColumnSpan="6"  Background="#20000000" Height="22" VerticalAlignment="Bottom"/>
                 <Image Grid.Column="0" Source="/Images/Designer.png" Width="64" Height="64" Margin="-7,-6,0,0" 
                    VerticalAlignment="Top" HorizontalAlignment="Left"/>
 
                 <TextBlock Grid.Column="1" Text="Claudable" FontSize="22" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="{StaticResource ClaudeTextBrush}"/>
 
-                <Button Grid.Column="2" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
+                <StackPanel Orientation="Horizontal" Grid.Column="2" Margin="0,0,0,0"
+                            VerticalAlignment="Bottom"
+                            >
+                    <Button Content="Export Conversation" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            Command="{Binding ExportConversationCommand}"
+                            Padding="4,-2,4,0"
+                            ToolTip="Export the current conversation to a file"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </StackPanel>
+                
+                <Button Grid.Column="3" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
                     <Path Data="M0,6 H10" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
                 </Button>
-                <Button Grid.Column="3" Style="{StaticResource TitleBarButtonStyle}" Click="MaximizeRestoreButton_Click">
-                    <Path x:Name="MaximizeRestoreButtonPath" Data="M0,0 H10 V10 H0 V0 M0,3 H7 V10 M3,0 V7" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
+                <Button Grid.Column="4" Style="{StaticResource TitleBarButtonStyle}" Click="MaximizeRestoreButton_Click">
+                    <Path x:Name="MaximizeRestoreButtonPath" Data="M0,0 H10 V10 H0 V0 M0,3" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
                 </Button>
-                <Button Grid.Column="4" Style="{StaticResource TitleBarButtonStyle}" Click="CloseButton_Click">
+                <Button Grid.Column="5" Style="{StaticResource TitleBarButtonStyle}" Click="CloseButton_Click">
                     <Path Data="M0,0 L10,10 M0,10 L10,0" Stroke="{StaticResource ClaudeTextBrush}" StrokeThickness="1"/>
                 </Button>
             </Grid>
@@ -90,7 +102,7 @@
                                            Margin="5,0,0,0"
                                        FontWeight="Bold"
                                        VerticalAlignment="Center"/>
-                                
+
                                 <Button Content="Set Project Root" Style="{StaticResource SmallButtonStyle}"
                                         Grid.Column="1"
                                         Margin="0,2,4,0" Padding="4,-2,4,0"

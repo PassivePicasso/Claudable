@@ -32,6 +32,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly object _updateLock = new object();
     private bool _isUpdating;
     private bool _isRefreshing;
+    private ConversationViewModel _currentConversation;
 
     public bool IsRefreshing
     {
@@ -126,6 +127,15 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+    public ConversationViewModel CurrentConversation
+    {
+        get => _currentConversation;
+        set
+        {
+            _currentConversation = value;
+            OnPropertyChanged();
+        }
+    }
     public ObservableCollection<SvgArtifactViewModel> SvgArtifacts => ArtifactManager.SvgArtifacts;
     public ICommand SetProjectRootCommand { get; private set; }
     public ICommand SaveStateCommand { get; private set; }
@@ -138,6 +148,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ViewProjectFileCommand { get; private set; }
     public ICommand CompareFilesCommand { get; }
     public ICommand CopyFileNameCommand { get; private set; }
+    public ICommand ExportConversationCommand { get; private set; }
 
     public MainViewModel()
     {
@@ -157,6 +168,44 @@ public class MainViewModel : INotifyPropertyChanged
         ViewProjectFileCommand = new RelayCommand<ProjectFile>(ViewProjectFile);
         CompareFilesCommand = new RelayCommand<ProjectFile>(async pf => await DiffViewer.ShowDiffDialog(pf));
         CopyFileNameCommand = new RelayCommand<ProjectFile>(pf => Clipboard.SetText(pf.Name));
+        ExportConversationCommand = new RelayCommand(ExportConversation);
+    }
+
+    private void ExportConversation()
+    {
+        try
+        {
+            // Get the conversation content
+            string conversationText = WebViewManager.ExportConversation();
+
+            // Suggest a filename based on conversation title if available
+            string suggestedFilename = "Claude_Conversation.txt";
+            if (WebViewManager.CurrentConversation != null && !string.IsNullOrEmpty(WebViewManager.CurrentConversation.Name))
+            {
+                // Replace invalid filename characters
+                string sanitizedName = string.Join("_", WebViewManager.CurrentConversation.Name.Split(Path.GetInvalidFileNameChars()));
+                suggestedFilename = $"Claude_{sanitizedName}.txt";
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|XML files (*.xml)|*.xml|Markdown file (*.md)|*.md|All files (*.*)|*.*",
+                DefaultExt = "md",
+                FileName = suggestedFilename
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                File.WriteAllText(dialog.FileName, conversationText);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error exporting conversation: {ex.Message}",
+                            "Export Failed",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+        }
     }
 
     private void ViewArtifact(ArtifactViewModel artifact)
@@ -322,7 +371,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (hasChanges)
             {
                 var sortedChildren = folder.Children
-                    .OrderBy(c => c is ProjectFile)
+                    .OrderBy(c => !c.IsFolder)
                     .ThenBy(c => c.Name)
                     .ToList();
 

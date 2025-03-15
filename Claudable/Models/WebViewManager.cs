@@ -17,6 +17,10 @@ public class WebViewManager : IDisposable
     private readonly Regex ProjectUrl = new Regex(@"^https:\/\/claude\.ai\/project\/(?<projectId>.*?)$");
     private readonly Regex DocsUrl = new Regex(@".*?\/api\/organizations\/(?<organizationId>.*?)\/projects\/(?<projectId>.*?)\/docs(?:\/(?<artifactId>.*?))?$");
     private readonly Regex DataCollector = new Regex(@".*?/api/organizations/(?<organizationId>.*?)/projects/(?<projectId>.+?)/.*");
+    private readonly Regex ConversationUrl = new Regex(@".*?/api/organizations/(?<organizationId>.*?)/chat_conversations/(?<conversationId>[a-f0-9-]+)(?:\?.*)?$");
+    private readonly Regex ChatPageUrl = new Regex(@"^https:\/\/claude\.ai\/chat\/(?<conversationId>[a-f0-9-]+)$");
+    private readonly Regex CurrentLeafMessageUrl = new Regex(@".*?/api/organizations/(?<organizationId>.*?)/chat_conversations/(?<conversationId>[a-f0-9-]+)/current_leaf_message_uuid$");
+
     private readonly WebView2 _webView;
     private string _lastVisitedUrl;
     private string _currentProjectUrl;
@@ -26,13 +30,24 @@ public class WebViewManager : IDisposable
 
     private string _activeProjectUuid;
     private string _activeOrganizationUuid;
+    private ConversationViewModel currentConversation;
 
     public string LastVisitedUrl => _lastVisitedUrl;
     public string CurrentProjectUrl => _currentProjectUrl;
+    public ConversationViewModel CurrentConversation
+    {
+        get => currentConversation;
+        private set
+        {
+            currentConversation = value;
+        }
+    }
 
     public event EventHandler<string> DocsReceived;
     public event EventHandler<string> ProjectChanged;
     public event EventHandler<string> ArtifactDeleted;
+    public event EventHandler<ConversationViewModel> ConversationReceived;
+    public event EventHandler<string> CurrentLeafMessageChanged;
 
     public WebViewManager(WebView2 webView, string initialUrl)
     {
@@ -106,6 +121,56 @@ public class WebViewManager : IDisposable
                     ArtifactDeleted?.Invoke(this, artifactId);
                 }
                 break;
+            case var _ when ConversationUrl.IsMatch(url) && args.Request.Method == "GET":
+                {
+                    try
+                    {
+                        var response = args.Response;
+                        var stream = await response.GetContentAsync();
+                        using var reader = new StreamReader(stream);
+                        var conversationJson = reader.ReadToEnd();
+
+                        // Parse the conversation JSON
+                        var conversation = JsonConvert.DeserializeObject<ConversationViewModel>(conversationJson);
+                        if (conversation != null)
+                        {
+                            CurrentConversation = conversation;
+                            ConversationReceived?.Invoke(this, conversation);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error processing conversation: {ex}");
+                    }
+                }
+                break;
+            case var _ when CurrentLeafMessageUrl.IsMatch(url) && args.Request.Method == "PUT":
+                {
+                    if (args.Response.StatusCode == 200)
+                        try
+                        {
+                            var response = args.Response;
+                            var stream = await response.GetContentAsync();
+                            using var reader = new StreamReader(stream);
+                            var leafMessageJson = await reader.ReadToEndAsync();
+
+                            var leafMessageData = JsonConvert.DeserializeObject<CurrentLeafMessageUpdate>(leafMessageJson);
+                            if (leafMessageData != null && !string.IsNullOrEmpty(leafMessageData.CurrentLeafMessageUuid))
+                            {
+                                // Update the current conversation with the new leaf message UUID
+                                if (CurrentConversation != null)
+                                {
+                                    CurrentConversation.CurrentLeafMessageUuid = leafMessageData.CurrentLeafMessageUuid;
+                                    CurrentLeafMessageChanged?.Invoke(this, leafMessageData.CurrentLeafMessageUuid);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error processing current leaf message change: {ex}");
+                        }
+                }
+                break;
         }
     }
 
@@ -161,6 +226,24 @@ public class WebViewManager : IDisposable
             Console.WriteLine($"Error in delete operation: {e.Message}");
             throw;
         }
+    }
+
+    public string ExportConversation()
+    {
+        if (CurrentConversation == null)
+        {
+            Console.WriteLine("No conversation available to export.");
+            return null;
+        }
+
+        // Log conversation metadata for debugging
+        Console.WriteLine($"Exporting conversation: {CurrentConversation.Name}");
+        Console.WriteLine($"UUID: {CurrentConversation.Uuid}");
+        Console.WriteLine($"Current leaf message UUID: {CurrentConversation.CurrentLeafMessageUuid}");
+        Console.WriteLine($"Total messages: {CurrentConversation.Messages.Count}");
+
+        var exporter = new ConversationExporter(CurrentConversation);
+        return exporter.Export();
     }
 
     private async Task FetchProjectDocs()
