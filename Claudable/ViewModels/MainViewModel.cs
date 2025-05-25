@@ -383,6 +383,13 @@ public class MainViewModel : INotifyPropertyChanged
 
     private bool ShouldExcludeEntry(Filter filter, string filePath)
     {
+        // Special case for dot folders filter
+        if (filter.Value == ".*")
+        {
+            string fileName = Path.GetFileName(filePath);
+            return fileName.StartsWith(".");
+        }
+
         var filterValue = filter.ShouldPrependProjectFolder
             ? Path.Combine(RootProjectFolder.FullPath, filter.Value)
             : filter.Value;

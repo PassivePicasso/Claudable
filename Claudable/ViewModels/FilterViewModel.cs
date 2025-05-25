@@ -43,6 +43,10 @@ public class FilterViewModel : INotifyPropertyChanged
         Filters = new ObservableCollection<Filter>();
         AddFilterCommand = new RelayCommand(AddFilter, CanAddFilter);
         RemoveFilterCommand = new RelayCommand<Filter>(RemoveFilter);
+        
+        // Add default filters for common folders to ignore
+        Filters.Add(new Filter(".*"));  // Special filter for all dot folders
+        Filters.Add(new Filter("node_modules"));
     }
 
     private bool CanAddFilter()
