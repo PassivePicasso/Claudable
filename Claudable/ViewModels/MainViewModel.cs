@@ -507,12 +507,23 @@ public class MainViewModel : INotifyPropertyChanged
                 {
                     file.UntrackArtifact();
                     var content = await File.ReadAllTextAsync(file.FullPath);
-                    var artifact = await WebViewManager.CreateArtifact(file.Name, content);
+                    
+                    if (WebViewManager.Instance == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("WebView manager is not initialized");
+                        continue;
+                    }
+
+                    var artifact = await WebViewManager.Instance.CreateArtifact(file.Name, content);
 
                     if (artifact != null)
                         file.UpdateFromArtifact(artifact);
 
                     processedFiles++;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Project context error refreshing artifact for {file.Name}: {ex.Message}");
                 }
                 catch (Exception ex)
                 {

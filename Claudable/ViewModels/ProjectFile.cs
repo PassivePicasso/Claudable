@@ -8,12 +8,12 @@ namespace Claudable.ViewModels;
 
 public class ProjectFile : FileSystemItem, INotifyPropertyChanged
 {
-    private ArtifactViewModel _associatedArtifact;
+    private ArtifactViewModel? _associatedArtifact;
     private DateTime _localLastModified;
     private DateTime _artifactLastModified;
     private bool _isLocalNewer;
 
-    public ArtifactViewModel AssociatedArtifact
+    public new ArtifactViewModel? AssociatedArtifact
     {
         get => _associatedArtifact;
         set
@@ -74,7 +74,7 @@ public class ProjectFile : FileSystemItem, INotifyPropertyChanged
     public ICommand TrackArtifactCommand { get; private set; }
     public ICommand UntrackArtifactCommand { get; private set; }
 
-    public ProjectFile(string name, string fullPath, FileSystemItem parent = null) : base()
+    public ProjectFile(string name, string fullPath, FileSystemItem? parent = null) : base()
     {
         Name = name;
         FullPath = fullPath;
@@ -136,6 +136,11 @@ public class ProjectFile : FileSystemItem, INotifyPropertyChanged
     {
         try
         {
+            if (WebViewManager.Instance == null)
+            {
+                throw new InvalidOperationException("WebView manager is not initialized.");
+            }
+
             var content = await File.ReadAllTextAsync(FullPath);
             var artifact = await WebViewManager.Instance.CreateArtifact(Name, content);
             if (artifact != null)
@@ -143,9 +148,23 @@ public class ProjectFile : FileSystemItem, INotifyPropertyChanged
                 UpdateFromArtifact(artifact);
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            // Show user-friendly message for project context issues
+            System.Windows.MessageBox.Show(
+                $"Unable to track artifact: {ex.Message}\n\nPlease ensure you are in a Claude project before tracking files.",
+                "Project Context Required",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+        }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error tracking artifact: {ex.Message}");
+            System.Windows.MessageBox.Show(
+                $"Error tracking artifact: {ex.Message}",
+                "Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
         }
     }
 
@@ -155,6 +174,11 @@ public class ProjectFile : FileSystemItem, INotifyPropertyChanged
         {
             try
             {
+                if (WebViewManager.Instance == null)
+                {
+                    throw new InvalidOperationException("WebView manager is not initialized.");
+                }
+
                 await WebViewManager.Instance.DeleteArtifact(AssociatedArtifact);
                 AssociatedArtifact = null;
                 ArtifactLastModified = DateTime.MinValue;
@@ -166,9 +190,9 @@ public class ProjectFile : FileSystemItem, INotifyPropertyChanged
         }
     }
 
-    public new event PropertyChangedEventHandler PropertyChanged;
+    public new event PropertyChangedEventHandler? PropertyChanged;
 
-    protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

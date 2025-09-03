@@ -11,8 +11,8 @@ namespace Claudable;
 
 public class WebViewManager : IDisposable
 {
-    public static WebViewManager Instance { get; private set; }
-    private string _baseUrl = "https://api.claude.ai";
+    public static WebViewManager? Instance { get; private set; }
+    private string _baseUrl = "https://claude.ai";
 
     private readonly Regex ProjectUrl = new Regex(@"^https:\/\/claude\.ai\/project\/(?<projectId>.*?)$");
     private readonly Regex DocsUrl = new Regex(@".*?\/api\/organizations\/(?<organizationId>.*?)\/projects\/(?<projectId>.*?)\/docs(?:\/(?<artifactId>.*?))?$");
@@ -22,19 +22,19 @@ public class WebViewManager : IDisposable
     private readonly Regex CurrentLeafMessageUrl = new Regex(@".*?/api/organizations/(?<organizationId>.*?)/chat_conversations/(?<conversationId>[a-f0-9-]+)/current_leaf_message_uuid$");
 
     private readonly WebView2 _webView;
-    private string _lastVisitedUrl;
-    private string _currentProjectUrl;
-    private string _lastDocsResponse;
+    private string? _lastVisitedUrl;
+    private string? _currentProjectUrl;
+    private string? _lastDocsResponse;
     private readonly Debouncer _reloadDebouncer;
     private readonly Debouncer _fetchDocsDebouncer;
 
-    private string _activeProjectUuid;
-    private string _activeOrganizationUuid;
-    private ConversationViewModel currentConversation;
+    private string? _activeProjectUuid;
+    private string? _activeOrganizationUuid;
+    private ConversationViewModel? currentConversation;
 
-    public string LastVisitedUrl => _lastVisitedUrl;
-    public string CurrentProjectUrl => _currentProjectUrl;
-    public ConversationViewModel CurrentConversation
+    public string? LastVisitedUrl => _lastVisitedUrl;
+    public string? CurrentProjectUrl => _currentProjectUrl;
+    public ConversationViewModel? CurrentConversation
     {
         get => currentConversation;
         private set
@@ -43,11 +43,11 @@ public class WebViewManager : IDisposable
         }
     }
 
-    public event EventHandler<string> DocsReceived;
-    public event EventHandler<string> ProjectChanged;
-    public event EventHandler<string> ArtifactDeleted;
-    public event EventHandler<ConversationViewModel> ConversationReceived;
-    public event EventHandler<string> CurrentLeafMessageChanged;
+    public event EventHandler<string>? DocsReceived;
+    public event EventHandler<string>? ProjectChanged;
+    public event EventHandler<string>? ArtifactDeleted;
+    public event EventHandler<ConversationViewModel>? ConversationReceived;
+    public event EventHandler<string>? CurrentLeafMessageChanged;
 
     public WebViewManager(WebView2 webView, string initialUrl)
     {
@@ -58,16 +58,17 @@ public class WebViewManager : IDisposable
         Instance = this;
         _reloadDebouncer = new Debouncer(() =>
         {
-            if (!ProjectUrl.IsMatch(LastVisitedUrl)) return;
+            if (LastVisitedUrl != null && !ProjectUrl.IsMatch(LastVisitedUrl)) return;
             _webView.Reload();
-        }, 1500);
+        }, 500);
         _fetchDocsDebouncer = new Debouncer(() => _ = FetchProjectDocs(), 250);
     }
 
     public async Task InitializeAsync()
     {
         await WebViewFactory.InitializeWebView(_webView);
-        _webView.Source = new Uri(_lastVisitedUrl);
+        if (_lastVisitedUrl != null)
+            _webView.Source = new Uri(_lastVisitedUrl);
         SetupWebViewEventHandlers();
     }
 
@@ -89,10 +90,7 @@ public class WebViewManager : IDisposable
 
         var match = DataCollector.Match(url);
         if (match.Success)
-        {
             _activeOrganizationUuid = match.Groups["organizationId"].Value;
-            _activeProjectUuid = match.Groups["projectId"].Value;
-        }
 
         var uri = new Uri(url);
         var schemeHostPath = $"https://{uri.Host}{uri.AbsolutePath}";
@@ -176,7 +174,29 @@ public class WebViewManager : IDisposable
 
     public async Task<ArtifactViewModel> CreateArtifact(string fileName, string content)
     {
-        string url = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
+        // Ensure we have valid project context before creating artifacts
+        if (string.IsNullOrEmpty(_activeProjectUuid) || string.IsNullOrEmpty(_activeOrganizationUuid))
+        {
+            throw new InvalidOperationException("No active project context. Please ensure you're in a Claude project before creating artifacts.");
+        }
+
+        // Verify the current project URL matches our stored UUIDs for additional safety
+        if (!string.IsNullOrEmpty(_currentProjectUrl))
+        {
+            var projectMatch = ProjectUrl.Match(_currentProjectUrl);
+            if (projectMatch.Success)
+            {
+                string urlProjectId = projectMatch.Groups["projectId"].Value;
+                if (urlProjectId != _activeProjectUuid)
+                {
+                    // Update the UUID to match the current URL
+                    _activeProjectUuid = urlProjectId;
+                    Console.WriteLine($"Updated active project UUID to match current URL: {_activeProjectUuid}");
+                }
+            }
+        }
+
+        string url = $"https://claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
 
         var payload = new
         {
@@ -210,7 +230,21 @@ public class WebViewManager : IDisposable
 
     public async Task DeleteArtifact(ArtifactViewModel artifact)
     {
-        string deleteUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{artifact.ProjectUuid}/docs/{artifact.Uuid}";
+        // Ensure we have valid project context
+        if (string.IsNullOrEmpty(_activeOrganizationUuid))
+        {
+            throw new InvalidOperationException("No active organization context. Please ensure you're logged into Claude before deleting artifacts.");
+        }
+
+        // Use the artifact's project UUID if available, otherwise fall back to active project
+        string? projectUuid = !string.IsNullOrEmpty(artifact.ProjectUuid) ? artifact.ProjectUuid : _activeProjectUuid;
+        
+        if (string.IsNullOrEmpty(projectUuid))
+        {
+            throw new InvalidOperationException("No project context available for artifact deletion.");
+        }
+
+        string deleteUrl = $"https://claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{projectUuid}/docs/{artifact.Uuid}";
 
         string script = RESTCall("UntrackArtifact", "DELETE", deleteUrl);
 
@@ -228,7 +262,7 @@ public class WebViewManager : IDisposable
         }
     }
 
-    public string ExportConversation()
+    public string? ExportConversation()
     {
         if (CurrentConversation == null)
         {
@@ -248,7 +282,7 @@ public class WebViewManager : IDisposable
 
     private async Task FetchProjectDocs()
     {
-        string docsUrl = $"https://api.claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
+        string docsUrl = $"https://claude.ai/api/organizations/{_activeOrganizationUuid}/projects/{_activeProjectUuid}/docs";
 
         string script = RESTCall("fetchDocs", "GET", docsUrl);
 
@@ -263,7 +297,7 @@ public class WebViewManager : IDisposable
         }
     }
 
-    private string RESTCall(string functionName, string method, string url, object payload = null)
+    private string RESTCall(string functionName, string method, string url, object? payload = null)
     {
         var includePayload = payload != null;
         string script = $@"
@@ -272,7 +306,7 @@ public class WebViewManager : IDisposable
                         const response = await fetch(url, {{
                             method: '{method}',
                             headers: {{
-                                'authority': 'api.claude.ai',
+                                'authority': 'claude.ai',
                                 'origin': 'https://claude.ai',
                                 'accept': '*/*',
                                 'accept-language': 'en-US,en;q=0.9',
@@ -323,8 +357,35 @@ public class WebViewManager : IDisposable
             string newProjectUrl = $"https://{uri.Host}{uri.AbsolutePath}";
             if (newProjectUrl != _currentProjectUrl)
             {
+                Console.WriteLine($"Project changed from '{_currentProjectUrl}' to '{newProjectUrl}'");
                 _currentProjectUrl = newProjectUrl;
                 ProjectChanged?.Invoke(this, _currentProjectUrl);
+            }
+            
+            // Extract project UUID directly from the project URL path
+            var projectMatch = ProjectUrl.Match(newProjectUrl);
+            if (projectMatch.Success)
+            {
+                string newProjectUuid = projectMatch.Groups["projectId"].Value;
+                if (newProjectUuid != _activeProjectUuid)
+                {
+                    Console.WriteLine($"Project UUID updated from '{_activeProjectUuid}' to '{newProjectUuid}'");
+                    _activeProjectUuid = newProjectUuid;
+                }
+            }
+            else
+            {
+                // Fallback: try the DataCollector regex for API URLs
+                var match = DataCollector.Match(url);
+                if (match.Success)
+                {
+                    string newProjectUuid = match.Groups["projectId"].Value;
+                    if (newProjectUuid != _activeProjectUuid)
+                    {
+                        Console.WriteLine($"Project UUID updated (fallback) from '{_activeProjectUuid}' to '{newProjectUuid}'");
+                        _activeProjectUuid = newProjectUuid;
+                    }
+                }
             }
         }
     }
