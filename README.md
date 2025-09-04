@@ -28,7 +28,9 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 - Real-time file system monitoring
 - Context menu integration with Windows Explorer
 - Drag-and-drop support
-- Custom file filtering system
+- Custom file filtering system with default filters for:
+  - Hidden folders (starting with a dot)
+  - Common dependency folders (node_modules)
 
 ### 3. Artifact Synchronization
 - Track local files as Claude artifacts
@@ -155,8 +157,11 @@ The source code of Claudable is open and concise, allowing for easy review. If c
 ### Custom Filters
 1. Go to Filter Settings tab
 2. Enter file/folder patterns to exclude
-3. Filters apply across all view modes
-4. Settings persist between sessions
+3. Default filters are applied automatically:
+   - All folders starting with a dot (like .git, .vs, etc.)
+   - The node_modules folder
+4. Filters apply across all view modes
+5. Settings persist between sessions
 
 ### Working with Artifacts
 - Double-click files to view content
